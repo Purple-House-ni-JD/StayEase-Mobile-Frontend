@@ -1,6 +1,7 @@
 import { useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import {
+  Alert,
   Animated,
   KeyboardAvoidingView,
   Platform,
@@ -13,30 +14,9 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-
-// ─── Design Tokens ────────────────────────────────────────────────────────────
-const COLORS = {
-  primary: "#0A1D37",
-  secondary: "#C5A059",
-  tertiary: "#E6BE7E",
-  neutral: "#FFFFFF",
-  background: "#F5F3EF",
-  inputBg: "#FFFFFF",
-  inputBorder: "#E0DDD8",
-  inputBorderFocus: "#C5A059",
-  textMuted: "#9A9690",
-  textBody: "#3A3530",
-  textLabel: "#5A5550",
-  danger: "#C0392B",
-};
-
-const FONTS = {
-  headline: "NotoSerif-Bold",
-  headlineReg: "NotoSerif-Regular",
-  body: "PlusJakartaSans-Regular",
-  bodyLight: "PlusJakartaSans-Light",
-  label: "PlusJakartaSans-Bold",
-};
+import { COLORS, FONTS } from "../constants/colors";
+import { useAuth } from "@/context/AuthContext";
+import { extractErrorMessage } from "@/lib/errorUtils";
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
@@ -50,11 +30,9 @@ const InputField = ({
   autoCapitalize = "none",
   icon,
 }) => {
-  const [focused, setFocused] = useState(false);
   const borderAnim = useRef(new Animated.Value(0)).current;
 
   const handleFocus = () => {
-    setFocused(true);
     Animated.timing(borderAnim, {
       toValue: 1,
       duration: 200,
@@ -63,7 +41,6 @@ const InputField = ({
   };
 
   const handleBlur = () => {
-    setFocused(false);
     Animated.timing(borderAnim, {
       toValue: 0,
       duration: 200,
@@ -101,6 +78,7 @@ const InputField = ({
 // ─── Main Component ────────────────────────────────────────────────────────────
 const RegisterPage = () => {
   const router = useRouter();
+  const { register } = useAuth();
 
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -108,6 +86,7 @@ const RegisterPage = () => {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [agreed, setAgreed] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Animations
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -126,10 +105,40 @@ const RegisterPage = () => {
         useNativeDriver: true,
       }),
     ]).start();
-  }, []);
+  }, [fadeAnim, slideAnim]);
 
-  const handleRegister = () => {
-    router.push("/pages/LoginPage");
+  const handleRegister = async () => {
+    if (!agreed) return;
+    if (!firstName.trim() || !lastName.trim() || !email.trim()) {
+      Alert.alert("Missing fields", "Please complete all required fields.");
+      return;
+    }
+    if (password.length < 8) {
+      Alert.alert("Weak password", "Password must be at least 8 characters.");
+      return;
+    }
+    if (password !== confirmPassword) {
+      Alert.alert("Password mismatch", "Passwords do not match.");
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      await register({
+        email: email.trim(),
+        username: email.trim(),
+        first_name: firstName.trim(),
+        last_name: lastName.trim(),
+        phone_number: "",
+        password,
+        password2: confirmPassword,
+      });
+      router.replace("pages/HomePage");
+    } catch (error) {
+      Alert.alert("Registration failed", extractErrorMessage(error));
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleBack = () => {
@@ -137,7 +146,7 @@ const RegisterPage = () => {
   };
 
   const handleSignIn = () => {
-    router.push("/pages/LoginPage");
+    router.push("pages/LoginPage");
   };
 
   return (
@@ -246,9 +255,11 @@ const RegisterPage = () => {
               ]}
               onPress={handleRegister}
               activeOpacity={0.88}
-              disabled={!agreed}
+              disabled={!agreed || isSubmitting}
             >
-              <Text style={styles.registerBtnText}>Complete Registration</Text>
+              <Text style={styles.registerBtnText}>
+                {isSubmitting ? "Creating account..." : "Complete Registration"}
+              </Text>
               <Text style={styles.registerBtnArrow}> →</Text>
             </TouchableOpacity>
 
