@@ -13,6 +13,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import GlobeIcon from "../assets/icons/globe.svg";
+import { useAuth } from "@/context/AuthContext";
 
 const { width, height } = Dimensions.get("window");
 
@@ -60,12 +61,19 @@ const StarRating = ({ count = 5 }) => (
 
 const Onboarding = () => {
   const router = useRouter();
+  const { user, isLoading } = useAuth();
 
   // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(40)).current;
   const buttonAnim = useRef(new Animated.Value(0)).current;
   const badgeAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (!isLoading && user) {
+      router.replace("pages/HomePage");
+    }
+  }, [isLoading, router, user]);
 
   useEffect(() => {
     Animated.sequence([
@@ -92,14 +100,14 @@ const Onboarding = () => {
         useNativeDriver: true,
       }),
     ]).start();
-  }, []);
+  }, [badgeAnim, buttonAnim, fadeAnim, slideAnim]);
 
   const handleGetStarted = () => {
-    router.push("/pages/RegisterPage");
+    router.push("pages/RegisterPage");
   };
 
   const handleLogin = () => {
-    router.push("/pages/LoginPage");
+    router.push("pages/LoginPage");
   };
 
   return (
@@ -148,7 +156,7 @@ const Onboarding = () => {
             Experience{"\n"}Unparalleled{"\n"}Luxury
           </Text>
           <Text style={styles.subheadline}>
-            Discover a curated selection of the world's most prestigious
+            Discover a curated selection of the world&apos;s most prestigious
             residences, tailored to your exquisite taste.
           </Text>
         </Animated.View>
