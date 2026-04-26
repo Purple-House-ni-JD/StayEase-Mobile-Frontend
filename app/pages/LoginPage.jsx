@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useRouter } from "expo-router";
 import {
+  Alert,
   View,
   Text,
   TextInput,
@@ -10,34 +11,11 @@ import {
   StatusBar,
   KeyboardAvoidingView,
   Platform,
-  Dimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-
-const { height } = Dimensions.get("window");
-
-// ─── Design Tokens ────────────────────────────────────────────────────────────
-const COLORS = {
-  primary: "#0A1D37",
-  secondary: "#C5A059",
-  neutral: "#FFFFFF",
-  background: "#F5F3EF",
-  inputBg: "#FFFFFF",
-  inputBorder: "#E0DDD8",
-  inputBorderFocus: "#C5A059",
-  textMuted: "#9A9690",
-  textBody: "#3A3530",
-  textLabel: "#5A5550",
-};
-
-const FONTS = {
-  headline: "NotoSerif-Bold",
-  headlineReg: "NotoSerif-Regular",
-  headlineLight: "NotoSerif-Light",
-  body: "PlusJakartaSans-Regular",
-  bodyLight: "PlusJakartaSans-Light",
-  label: "PlusJakartaSans-Bold",
-};
+import { COLORS, FONTS } from "../constants/colors";
+import { useAuth } from "@/context/AuthContext";
+import { extractErrorMessage } from "@/lib/errorUtils";
 
 // ─── Animated Input Field ─────────────────────────────────────────────────────
 const InputField = ({
@@ -98,8 +76,10 @@ const InputField = ({
 // ─── Main Component ───────────────────────────────────────────────────────────
 const LoginPage = () => {
   const router = useRouter();
+  const { login } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Animations
   const headerFade = useRef(new Animated.Value(0)).current;
@@ -134,10 +114,23 @@ const LoginPage = () => {
         }),
       ]),
     ]).start();
-  }, []);
+  }, [cardFade, cardSlide, headerFade, headerSlide]);
 
-  const handleLogin = () => {
-    router.push("/pages/HomePage");
+  const handleLogin = async () => {
+    if (!email.trim() || !password.trim()) {
+      Alert.alert("Missing fields", "Please enter your email and password.");
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      await login(email.trim(), password);
+      router.replace("pages/HomePage");
+    } catch (error) {
+      Alert.alert("Login failed", extractErrorMessage(error));
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleForgot = () => {
@@ -145,7 +138,7 @@ const LoginPage = () => {
   };
 
   const handleSignUp = () => {
-    router.push("/pages/RegisterPage");
+    router.push("pages/RegisterPage");
   };
 
   const handleGoogle = () => {
@@ -221,8 +214,11 @@ const LoginPage = () => {
             style={styles.loginBtn}
             onPress={handleLogin}
             activeOpacity={0.88}
+            disabled={isSubmitting}
           >
-            <Text style={styles.loginBtnText}>Log In</Text>
+            <Text style={styles.loginBtnText}>
+              {isSubmitting ? "Signing in..." : "Log In"}
+            </Text>
             <Text style={styles.loginBtnArrow}> →</Text>
           </TouchableOpacity>
 
@@ -262,7 +258,9 @@ const LoginPage = () => {
 
           {/* Sign Up Link */}
           <View style={styles.signUpRow}>
-            <Text style={styles.signUpPrompt}>Don't have an account? </Text>
+            <Text style={styles.signUpPrompt}>
+              Don&apos;t have an account?{" "}
+            </Text>
             <TouchableOpacity onPress={handleSignUp} activeOpacity={0.7}>
               <Text style={styles.signUpLink}>Sign Up</Text>
             </TouchableOpacity>
