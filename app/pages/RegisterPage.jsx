@@ -78,7 +78,7 @@ const InputField = ({
 // ─── Main Component ────────────────────────────────────────────────────────────
 const RegisterPage = () => {
   const router = useRouter();
-  const { register } = useAuth();
+  const { register, googleSignIn, facebookSignIn } = useAuth();
 
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -147,6 +147,30 @@ const RegisterPage = () => {
 
   const handleSignIn = () => {
     router.push("pages/LoginPage");
+  };
+
+  const handleGoogleRegister = async () => {
+    try {
+      setIsSubmitting(true);
+      await googleSignIn();
+      router.replace("pages/HomePage");
+    } catch (error) {
+      Alert.alert("Google registration failed", extractErrorMessage(error));
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleFacebookRegister = async () => {
+    try {
+      setIsSubmitting(true);
+      await facebookSignIn();
+      router.replace("pages/HomePage");
+    } catch (error) {
+      Alert.alert("Facebook registration failed", extractErrorMessage(error));
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -273,12 +297,22 @@ const RegisterPage = () => {
             {/* ── Social Buttons ── */}
             <View style={styles.socialRow}>
               {/* Google */}
-              <TouchableOpacity style={styles.socialBtn} activeOpacity={0.8}>
+              <TouchableOpacity
+                style={styles.socialBtn}
+                onPress={handleGoogleRegister}
+                disabled={isSubmitting}
+                activeOpacity={0.8}
+              >
                 <Text style={styles.socialIcon}>G</Text>
               </TouchableOpacity>
-              {/* Apple / iOS */}
-              <TouchableOpacity style={styles.socialBtn} activeOpacity={0.8}>
-                <Text style={styles.socialLabel}>iOS</Text>
+              {/* Facebook */}
+              <TouchableOpacity
+                style={styles.socialBtn}
+                onPress={handleFacebookRegister}
+                disabled={isSubmitting}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.socialIcon}>f</Text>
               </TouchableOpacity>
             </View>
 

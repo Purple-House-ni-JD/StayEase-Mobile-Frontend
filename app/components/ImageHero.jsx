@@ -9,6 +9,8 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { COLORS, FONTS } from "../constants/colors";
+import { Ionicons } from "@expo/vector-icons";
+
 
 /**
  * ImageHero
@@ -70,7 +72,7 @@ const ImageHero = ({
             onPress={onBack}
             activeOpacity={0.85}
           >
-            <Text style={styles.backArrow}>←</Text>
+            <Ionicons name="arrow-back" size={24} color={COLORS.text} />
           </TouchableOpacity>
         )}
 

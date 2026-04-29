@@ -35,37 +35,20 @@ export default function RootLayout() {
     <AuthProvider>
       <Stack>
         <Stack.Screen name="index" options={{ headerShown: false }} />
-        <Stack.Screen
-          name="pages/RegisterPage"
-          options={{ headerShown: false }}
-        />
+        <Stack.Screen name="pages/RegisterPage" options={{ headerShown: false }} />
         <Stack.Screen name="pages/LoginPage" options={{ headerShown: false }} />
         <Stack.Screen name="pages/HomePage" options={{ headerShown: false }} />
-        <Stack.Screen
-          name="pages/BookingCartPage"
-          options={{ headerShown: false }}
-        />
-        <Stack.Screen
-          name="pages/BookingsPage"
-          options={{ headerShown: false }}
-        />
-        <Stack.Screen
-          name="pages/CheckoutPage"
-          options={{ headerShown: false }}
-        />
-        <Stack.Screen
-          name="pages/ConfirmationPage"
-          options={{ headerShown: false }}
-        />
-        <Stack.Screen
-          name="pages/ProfilePage"
-          options={{ headerShown: false }}
-        />
-        <Stack.Screen
-          name="pages/RoomDetailPage"
-          options={{ headerShown: false }}
-        />
+        <Stack.Screen name="pages/BookingCartPage" options={{ headerShown: false }} />
+        <Stack.Screen name="pages/BookingsPage" options={{ headerShown: false }} />
+        <Stack.Screen name="pages/CheckoutPage" options={{ headerShown: false }} />
+        <Stack.Screen name="pages/ConfirmationPage" options={{ headerShown: false }} />
+        <Stack.Screen name="pages/ProfilePage" options={{ headerShown: false }} />
+        <Stack.Screen name="pages/RoomDetailPage" options={{ headerShown: false }} />
+        <Stack.Screen name="pages/BookingDetailPage" options={{ headerShown: false }} />
         <Stack.Screen name="rooms/[roomId]" options={{ headerShown: false }} />
+        <Stack.Screen name="pages/EditProfilePage" options={{ headerShown: false }} />
+        <Stack.Screen name="pages/PaymentMethodsPage" options={{ headerShown: false }} />
+        <Stack.Screen name="pages/HelpSupportPage" options={{ headerShown: false }} />
       </Stack>
     </AuthProvider>
   );

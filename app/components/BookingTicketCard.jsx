@@ -48,8 +48,8 @@ const BookingTicketCard = ({
 
       {/* ── Detail Grid ── */}
       <View style={styles.grid}>
-        <DetailCell label="GUEST NAME" value={guestName} />
-        <DetailCell label="ROOM TYPE" value={roomType} align="right" />
+        {/* <DetailCell label="GUEST NAME" value={guestName} />
+        <DetailCell label="ROOM TYPE" value={roomType} align="right" /> */}
         <DetailCell label="CHECK-IN" value={checkIn} style={styles.cellTop} />
         <DetailCell
           label="CHECK-OUT"

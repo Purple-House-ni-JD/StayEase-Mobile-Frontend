@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useMemo } from "react";
+import { useCallback, useEffect, useRef, useMemo } from "react";
 import {
   Animated,
   Dimensions,
@@ -28,16 +28,16 @@ const CARD_WIDTH = (width - 52 - 12) / 2;
 const HomePage = () => {
   const router = useRouter();
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState("home");
-
   const rooms = useRoomStore((state) => state.rooms);
+  const searchQuery = useRoomStore((state) => state.searchQuery);
+  const activeCategory = useRoomStore((state) => state.activeCategory);
   const featuredProperty = useRoomStore((state) => state.featuredProperty);
   const isRoomsLoading = useRoomStore((state) => state.isRoomsLoading);
   const hydrateRooms = useRoomStore((state) => state.hydrateRooms);
-  const searchQuery = useRoomStore((state) => state.searchQuery);
-  const activeCategory = useRoomStore((state) => state.activeCategory);
-  const setSearchQuery = useRoomStore((state) => state.setSearchQuery);
+  const activeTab = useRoomStore((state) => state.activeTab);
+  const setActiveTab = useRoomStore((state) => state.setActiveTab);
   const setActiveCategory = useRoomStore((state) => state.setActiveCategory);
+  const setSearchQuery = useRoomStore((state) => state.setSearchQuery);
 
   const headerFade = useRef(new Animated.Value(0)).current;
   const contentFade = useRef(new Animated.Value(0)).current;
@@ -104,75 +104,94 @@ const HomePage = () => {
     />
   );
 
-  const renderHeader = () => (
-    <Animated.View
-      style={{
-        opacity: contentFade,
-        transform: [{ translateY: contentSlide }],
-      }}
-    >
-      <View style={styles.greetingSection}>
-        <Text style={styles.greetingText}>
-          Good morning, {user?.first_name || "Guest"}
-        </Text>
-        <Text style={styles.greetingSubtext}>
-          Find your perfect stay today.
-        </Text>
-      </View>
-
-      <SearchBar
-        value={searchQuery}
-        onChangeText={setSearchQuery}
-        placeholder="Search destinations..."
-      />
-
-      <View style={styles.filterRow}>
-        <TouchableOpacity style={styles.filterChipActive} activeOpacity={0.8}>
-          <Text style={styles.filterChipIcon}>📅</Text>
-          <Text style={styles.filterChipTextActive}>Oct 12 - 15</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.filterChip} activeOpacity={0.8}>
-          <Text style={styles.filterChipIcon}>👤</Text>
-          <Text style={styles.filterChipText}>2 Guests</Text>
-        </TouchableOpacity>
-      </View>
-
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.tabsScroll}
-        contentContainerStyle={styles.tabsContent}
+  // ✅ FIX: Wrap in useCallback so FlatList receives a stable reference.
+  // Without this, FlatList sees a new component type on every render and
+  // fully unmounts/remounts the header, which dismisses the keyboard.
+  const renderHeader = useCallback(
+    () => (
+      <Animated.View
+        style={{
+          opacity: contentFade,
+          transform: [{ translateY: contentSlide }],
+        }}
       >
-        {roomCategories.map((cat) => (
-          <CategoryTab
-            key={cat}
-            label={cat}
-            active={activeCategory === cat}
-            onPress={() => setActiveCategory(cat)}
-          />
-        ))}
-      </ScrollView>
-
-      {featuredProperty ? (
-        <FeaturedCard
-          item={featuredProperty}
-          onPress={() => {
-            const firstRoom = rooms[0];
-            if (firstRoom) {
-              router.push(`/rooms/${firstRoom.id}`);
-            }
-          }}
+        <View style={styles.greetingSection}>
+          <Text style={styles.greetingText}>
+            Good morning, {user?.first_name || "Guest"}
+          </Text>
+          <Text style={styles.greetingSubtext}>
+            Find your perfect stay today.
+          </Text>
+        </View>
+    
+        <SearchBar
+          initialValue={searchQuery}
+          onSubmit={setSearchQuery}
+          placeholder="Search rooms..."
         />
-      ) : null}
 
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Available Rooms</Text>
-        <TouchableOpacity activeOpacity={0.7}>
-          <Text style={styles.sectionViewAll}>View all</Text>
-        </TouchableOpacity>
-      </View>
-    </Animated.View>
+        <View style={styles.filterRow}>
+          <TouchableOpacity style={styles.filterChipActive} activeOpacity={0.8}>
+            <Text style={styles.filterChipIcon}>📅</Text>
+            <Text style={styles.filterChipTextActive}>Oct 12 - 15</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.filterChip} activeOpacity={0.8}>
+            <Text style={styles.filterChipIcon}>👤</Text>
+            <Text style={styles.filterChipText}>2 Guests</Text>
+          </TouchableOpacity>
+        </View>
+
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.tabsScroll}
+          contentContainerStyle={styles.tabsContent}
+        >
+          {roomCategories.map((cat) => (
+            <CategoryTab
+              key={cat}
+              label={cat}
+              active={activeCategory === cat}
+              onPress={() => setActiveCategory(cat)}
+            />
+          ))}
+        </ScrollView>
+
+        {featuredProperty ? (
+          <FeaturedCard
+            item={featuredProperty}
+            onPress={() => {
+              const firstRoom = rooms[0];
+              if (firstRoom) {
+                router.push(`/rooms/${firstRoom.id}`);
+              }
+            }}
+          />
+        ) : null}
+
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Available Rooms</Text>
+          <TouchableOpacity activeOpacity={0.7}>
+            <Text style={styles.sectionViewAll}>View all</Text>
+          </TouchableOpacity>
+        </View>
+      </Animated.View>
+    ),
+    // Only re-render the header when these values actually change — not on keystrokes.
+    [
+      contentFade,
+      contentSlide,
+      user,
+      searchQuery,
+      setSearchQuery,
+      roomCategories,
+      activeCategory,
+      setActiveCategory,
+      featuredProperty,
+      rooms,
+      router,
+    ],
   );
 
   return (
@@ -184,11 +203,7 @@ const HomePage = () => {
       />
 
       <Animated.View style={{ opacity: headerFade }}>
-        <TopBar
-          user={user}
-          onMenuPress={() => console.log("Menu pressed")}
-          onAvatarPress={() => console.log("Avatar pressed")}
-        />
+        <TopBar />
       </Animated.View>
 
       <FlatList
@@ -202,6 +217,9 @@ const HomePage = () => {
         ListHeaderComponent={renderHeader}
         ListHeaderComponentStyle={styles.listHeader}
         ListFooterComponent={<View style={styles.listFooter} />}
+        // ✅ FIX: Prevents the FlatList from stealing taps (and focus) away
+        // from the keyboard while it's open.
+        keyboardShouldPersistTaps="handled"
         ListEmptyComponent={
           !isRoomsLoading ? (
             <Text style={styles.emptyText}>No rooms found.</Text>

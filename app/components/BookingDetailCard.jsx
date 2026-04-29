@@ -43,7 +43,7 @@ const BookingDetailCard = ({ booking, defaultExpanded = true, style }) => {
     new Animated.Value(defaultExpanded ? 1 : 0),
   ).current;
 
-  const currency = booking.currency ?? "₱";
+  const currency = "₱";
   const total = booking.roomTotal + booking.serviceFee;
 
   const toggle = () => {

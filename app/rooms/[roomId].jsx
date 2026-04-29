@@ -221,7 +221,7 @@ const RoomDetail = () => {
               {added
                 ? "Added to cart"
                 : canBook
-                  ? `Add to Booking Cart · $${
+                  ? `Add to Booking Cart · ₱${
                       room.price_per_night * nights +
                       Math.round(room.price_per_night * nights * 0.1)
                     }`

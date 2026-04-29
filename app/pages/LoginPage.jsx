@@ -76,7 +76,7 @@ const InputField = ({
 // ─── Main Component ───────────────────────────────────────────────────────────
 const LoginPage = () => {
   const router = useRouter();
-  const { login } = useAuth();
+  const { login, googleSignIn, facebookSignIn } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -141,12 +141,28 @@ const LoginPage = () => {
     router.push("pages/RegisterPage");
   };
 
-  const handleGoogle = () => {
-    // TODO: Google OAuth
+  const handleGoogle = async () => {
+    try {
+      setIsSubmitting(true);
+      await googleSignIn();
+      router.replace("pages/HomePage");
+    } catch (error) {
+      Alert.alert("Google sign-in failed", extractErrorMessage(error));
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handleFacebook = () => {
-    // TODO: Facebook OAuth
+  const handleFacebook = async () => {
+    try {
+      setIsSubmitting(true);
+      await facebookSignIn();
+      router.replace("pages/HomePage");
+    } catch (error) {
+      Alert.alert("Facebook sign-in failed", extractErrorMessage(error));
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (

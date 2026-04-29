@@ -175,7 +175,7 @@ const RoomDetailPage = () => {
             <Text style={styles.ctaIcon}>🛒</Text>
             <Text style={styles.ctaText}>
               {canBook
-                ? `Add to Booking Cart · $${room.price_per_night * nights + Math.round(room.price_per_night * nights * 0.1)}`
+                ? `Add to Booking Cart · ₱${room.price_per_night * nights + Math.round(room.price_per_night * nights * 0.1)}`
                 : "Select dates to continue"}
             </Text>
           </TouchableOpacity>

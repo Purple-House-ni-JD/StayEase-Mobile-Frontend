@@ -7,6 +7,13 @@ import {
   saveTokens,
 } from "../lib/tokenStorage";
 import * as authService from "../services/authService";
+import {
+  googleSignIn,
+  facebookSignIn,
+  googleSignOut,
+  facebookSignOut,
+} from "../services/oauthService";
+import { googleOAuthLogin, facebookOAuthLogin } from "../services/authService";
 
 const AuthContext = createContext(null);
 
@@ -35,6 +42,10 @@ export const AuthProvider = ({ children }) => {
     });
   }, []);
 
+  const updateUser = (updatedFields) => {
+    setUser((prev) => ({ ...prev, ...updatedFields }));
+  };
+
   const value = useMemo(
     () => ({
       user,
@@ -51,12 +62,39 @@ export const AuthProvider = ({ children }) => {
         setUser(data.user);
         return data.user;
       },
+      googleSignIn: async () => {
+        try {
+          const oauthData = await googleSignIn();
+          // Send Google id_token to backend
+          const data = await googleOAuthLogin(oauthData.idToken);
+          await saveTokens(data.access, data.refresh);
+          setUser(data.user);
+          return data.user;
+        } catch (error) {
+          throw error;
+        }
+      },
+      facebookSignIn: async () => {
+        try {
+          const oauthData = await facebookSignIn();
+          // Send Facebook access_token to backend
+          const data = await facebookOAuthLogin(oauthData.accessToken);
+          await saveTokens(data.access, data.refresh);
+          setUser(data.user);
+          return data.user;
+        } catch (error) {
+          throw error;
+        }
+      },
       logout: async () => {
         try {
           const refresh = await getRefreshToken();
           if (refresh) {
             await authService.logout(refresh);
           }
+          // Sign out from OAuth providers
+          await googleSignOut();
+          await facebookSignOut();
         } catch {
           // Ignore API logout failures and clear local state.
         } finally {
@@ -64,6 +102,7 @@ export const AuthProvider = ({ children }) => {
           setUser(null);
         }
       },
+      updateUser,
     }),
     [isLoading, user],
   );

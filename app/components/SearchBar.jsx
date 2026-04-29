@@ -1,11 +1,18 @@
+import { useState } from "react";
 import { View, TextInput, StyleSheet, Text } from "react-native";
 import { COLORS, FONTS } from "../constants/colors";
 
 const SearchBar = ({
-  value,
-  onChangeText,
-  placeholder = "Search destinations...",
+  initialValue = "",
+  onSubmit,
+  placeholder = "Search rooms...",
 }) => {
+  const [localValue, setLocalValue] = useState(initialValue);
+
+  const handleSubmit = () => {
+    onSubmit?.(localValue);
+  };
+
   return (
     <View style={styles.searchBar}>
       <Text style={styles.searchIcon}>🔍</Text>
@@ -13,8 +20,10 @@ const SearchBar = ({
         style={styles.searchInput}
         placeholder={placeholder}
         placeholderTextColor={COLORS.textMuted}
-        value={value}
-        onChangeText={onChangeText}
+        value={localValue}
+        onChangeText={setLocalValue}
+        onSubmitEditing={handleSubmit}
+        returnKeyType="search"
         clearButtonMode="while-editing"
       />
     </View>
