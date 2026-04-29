@@ -59,7 +59,7 @@ const CartSummaryFooter = ({
         <View style={styles.totalRow}>
           <View>
             <Text style={styles.totalLabel}>TOTAL AMOUNT</Text>
-            <Text style={styles.totalValue}>${Number(total).toFixed(2)}</Text>
+            <Text style={styles.totalValue}>₱{Number(total).toFixed(2)}</Text>
           </View>
           <Text style={styles.taxNote}>{taxNote}</Text>
         </View>

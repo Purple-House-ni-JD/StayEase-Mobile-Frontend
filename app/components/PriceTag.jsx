@@ -32,7 +32,7 @@ const PriceTag = ({ amount, suffix = "/night", size = "md", color, style }) => {
 
   return (
     <View style={[styles.container, style]}>
-      <Text style={priceStyle}>${amount}</Text>
+      <Text style={priceStyle}>₱{amount}</Text>
       {suffix ? <Text style={suffixStyle}>{suffix}</Text> : null}
     </View>
   );

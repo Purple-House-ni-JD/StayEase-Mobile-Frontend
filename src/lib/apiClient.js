@@ -6,9 +6,8 @@ import {
   saveTokens,
 } from "./tokenStorage";
 
-const BASE_URL =
-  process.env.EXPO_PUBLIC_API_URL?.trim().split(",")[0] ||
-  "http://192.168.1.11:8000/api/v1";
+const BASE_URL = process.env.EXPO_PUBLIC_API_URL?.trim().split(",")[0];
+console.log("BASE_URL", BASE_URL);
 
 const apiClient = axios.create({
   baseURL: BASE_URL,

@@ -33,15 +33,15 @@ const PriceBreakdown = ({ pricePerNight, nights, serviceFee, style }) => {
       {/* Subtotal row */}
       <View style={styles.row}>
         <Text style={styles.label}>
-          ${pricePerNight} × {nights} {nights === 1 ? "night" : "nights"}
+          ₱{pricePerNight} × {nights} {nights === 1 ? "night" : "nights"}
         </Text>
-        <Text style={styles.value}>${subtotal}</Text>
+        <Text style={styles.value}>₱{subtotal}</Text>
       </View>
 
       {/* Service fee row */}
       <View style={styles.row}>
         <Text style={styles.label}>Service fee</Text>
-        <Text style={styles.value}>${fee}</Text>
+        <Text style={styles.value}>₱{fee}</Text>
       </View>
 
       {/* Divider */}
@@ -50,7 +50,7 @@ const PriceBreakdown = ({ pricePerNight, nights, serviceFee, style }) => {
       {/* Total */}
       <View style={styles.row}>
         <Text style={styles.totalLabel}>Total</Text>
-        <Text style={styles.totalValue}>${total}</Text>
+        <Text style={styles.totalValue}>₱{total}</Text>
       </View>
     </View>
   );

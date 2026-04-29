@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useRef, useEffect, useState } from "react";
 import {
   Animated,
   ScrollView,
@@ -8,13 +8,14 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 
 // ── Reusable components ───────────────────────────────────────────────────────
 import ConfirmationHeader from "../components/ConfirmationHeader";
 import BookingTicketCard from "../components/BookingTicketCard";
 import HotelSummaryCard from "../components/HotelSummaryCard";
 import { GoldButton, GhostButton } from "../components/ActionButtons";
+import TopBar from "../components/TopBar";
 
 // ─── Design Tokens ────────────────────────────────────────────────────────────
 const COLORS = {
@@ -25,47 +26,94 @@ const COLORS = {
   textMuted: "#9A9690",
 };
 
-// ─── Mock Data ────────────────────────────────────────────────────────────────
-// TODO: Replace with route params passed from CheckoutPage after successful POST
-const MOCK_CONFIRMATION = {
-  reference: "SE-9420815",
-  guestName: "Julian Thorne",
-  roomType: "Executive Suite",
-  checkIn: "Oct 24, 2023",
-  checkOut: "Oct 28, 2023",
-  hotelName: "The Ritz-Carlton, Paris",
-  hotelLocation: "Place Vendôme, Paris",
-  // hotelImage: require("../../assets/images/ritz-paris.png"),
-  amountPaid: 2450.0,
-  currency: "€",
+// ─── Utility Functions ───────────────────────────────────────────────────────────
+const formatDate = (dateString) => {
+  const date = new Date(dateString);
+  return date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
 };
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 const ConfirmationPage = () => {
   const router = useRouter();
+  const params = useLocalSearchParams();
+  const [bookingData, setBookingData] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   // Staggered entry animation
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(28)).current;
 
-  useRef(
-    (() => {
-      Animated.parallel([
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 500,
-          delay: 100,
-          useNativeDriver: true,
-        }),
-        Animated.timing(slideAnim, {
-          toValue: 0,
-          duration: 500,
-          delay: 100,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    })(),
-  );
+  useEffect(() => {
+    // Parse booking data from route params
+    if (params.bookingData) {
+      try {
+        const parsedData = JSON.parse(decodeURIComponent(params.bookingData));
+        setBookingData(parsedData);
+      } catch (error) {
+        console.error("Error parsing booking data:", error);
+      }
+    }
+    setLoading(false);
+  }, [params.bookingData]);
+
+  useEffect(() => {
+    // Start animation when component mounts
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 500,
+        delay: 100,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 500,
+        delay: 100,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [fadeAnim, slideAnim]);
+
+  // Show loading state
+  if (loading) {
+    return (
+      <View style={styles.container}>
+        <StatusBar
+          barStyle="light-content"
+          translucent
+          backgroundColor="transparent"
+        />
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>Loading booking details...</Text>
+        </View>
+      </View>
+    );
+  }
+
+  // Show error state if no booking data
+  if (!bookingData) {
+    return (
+      <View style={styles.container}>
+        <StatusBar
+          barStyle="light-content"
+          translucent
+          backgroundColor="transparent"
+        />
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>Booking information not found</Text>
+          <GhostButton
+            label="Back to Home"
+            onPress={() => router.push("/")}
+            style={styles.errorButton}
+          />
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -75,20 +123,7 @@ const ConfirmationPage = () => {
         backgroundColor="transparent"
       />
 
-      {/* ── Custom Navbar ── */}
-      <View style={styles.navbar}>
-        <TouchableOpacity
-          style={styles.backBtn}
-          onPress={() => router.back()}
-          activeOpacity={0.7}
-        >
-          <Text style={styles.backArrow}>←</Text>
-        </TouchableOpacity>
-        <Text style={styles.navBrand}>StayEase</Text>
-        <TouchableOpacity style={styles.avatarBtn} activeOpacity={0.8}>
-          <Text style={styles.avatarIcon}>👤</Text>
-        </TouchableOpacity>
-      </View>
+      <TopBar />
 
       <Animated.ScrollView
         style={[
@@ -108,11 +143,15 @@ const ConfirmationPage = () => {
 
         {/* ── Booking Ticket ── */}
         <BookingTicketCard
-          reference={MOCK_CONFIRMATION.reference}
-          guestName={MOCK_CONFIRMATION.guestName}
-          roomType={MOCK_CONFIRMATION.roomType}
-          checkIn={MOCK_CONFIRMATION.checkIn}
-          checkOut={MOCK_CONFIRMATION.checkOut}
+          reference={bookingData.booking_ref || bookingData.reference}
+          guestName={
+            bookingData.guest_name ||
+            `${bookingData.user?.first_name || ""} ${bookingData.user?.last_name || ""}`.trim() ||
+            "Guest"
+          }
+          roomType={bookingData.room?.name || bookingData.room_type || "Room"}
+          checkIn={formatDate(bookingData.check_in)}
+          checkOut={formatDate(bookingData.check_out)}
           style={styles.ticket}
         />
 
@@ -131,11 +170,11 @@ const ConfirmationPage = () => {
 
         {/* ── Hotel Summary ── */}
         <HotelSummaryCard
-          // imageSource={MOCK_CONFIRMATION.hotelImage}
-          hotelName={MOCK_CONFIRMATION.hotelName}
-          location={MOCK_CONFIRMATION.hotelLocation}
-          amountPaid={MOCK_CONFIRMATION.amountPaid}
-          currency={MOCK_CONFIRMATION.currency}
+          // imageSource={bookingData.room?.image_urls?.[0] ? { uri: bookingData.room.image_urls[0] } : null}
+          hotelName={bookingData.room?.name || "StayEase Property"}
+          location={bookingData.room?.location || "Philippines"}
+          amountPaid={bookingData.total_price || bookingData.amountPaid || 0}
+          currency="₱"
           status="PAID"
           style={styles.hotelCard}
         />
@@ -270,6 +309,34 @@ const styles = StyleSheet.create({
   },
   footer: {
     marginBottom: 8,
+  },
+
+  // Loading and error states
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  loadingText: {
+    fontFamily: "PlusJakartaSans-Regular",
+    fontSize: 16,
+    color: "rgba(255,255,255,0.7)",
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 20,
+  },
+  errorText: {
+    fontFamily: "PlusJakartaSans-Regular",
+    fontSize: 16,
+    color: "rgba(255,255,255,0.7)",
+    textAlign: "center",
+    marginBottom: 20,
+  },
+  errorButton: {
+    marginTop: 10,
   },
 });
 

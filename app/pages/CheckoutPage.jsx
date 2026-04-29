@@ -21,6 +21,7 @@ import useRoomStore from "../store/useRoomStore";
 import { createBooking } from "@/services/bookingService";
 import { extractErrorMessage } from "@/lib/errorUtils";
 import { useAuth } from "@/context/AuthContext";
+import TopBar from "../components/TopBar";
 
 // ─── Design Tokens ────────────────────────────────────────────────────────────
 const COLORS = {
@@ -160,7 +161,7 @@ const CheckoutPage = () => {
 
     try {
       setSubmitting(true);
-      await createBooking({
+      const bookingResponse = await createBooking({
         room_ids: cartItems.map((item) => item.roomId),
         check_in: cartItems[0].checkIn.toISOString().split("T")[0],
         check_out: cartItems[0].checkOut.toISOString().split("T")[0],
@@ -168,7 +169,14 @@ const CheckoutPage = () => {
         payment_method: selectedPayment,
       });
       clearCart();
-      router.push("pages/ConfirmationPage");
+
+      // Pass booking data to confirmation page
+      router.push({
+        pathname: "pages/ConfirmationPage",
+        params: {
+          bookingData: encodeURIComponent(JSON.stringify(bookingResponse)),
+        },
+      });
     } catch (error) {
       Alert.alert("Checkout failed", extractErrorMessage(error));
     } finally {
@@ -177,27 +185,12 @@ const CheckoutPage = () => {
   };
   return (
     <View style={styles.container}>
+      <TopBar />
       <StatusBar
         barStyle="light-content"
         translucent
         backgroundColor="transparent"
       />
-
-      {/* ── Custom Navbar (back + brand) ── */}
-      <View style={styles.navbar}>
-        <TouchableOpacity
-          style={styles.backBtn}
-          onPress={() => router.back()}
-          activeOpacity={0.7}
-        >
-          <Text style={styles.backArrow}>←</Text>
-        </TouchableOpacity>
-        <Text style={styles.navBrand}>StayEase</Text>
-        {/* Avatar placeholder */}
-        <View style={styles.avatarPlaceholder}>
-          <Text style={styles.avatarInitial}>J</Text>
-        </View>
-      </View>
 
       <KeyboardAvoidingView
         style={styles.flex}
@@ -282,10 +275,7 @@ const CheckoutPage = () => {
       </KeyboardAvoidingView>
 
       {/* ── Fixed Confirm Button ── */}
-      <ConfirmButton
-        onPress={handleConfirm}
-        loading={submitting}
-      />
+      <ConfirmButton onPress={handleConfirm} loading={submitting} />
     </View>
   );
 };

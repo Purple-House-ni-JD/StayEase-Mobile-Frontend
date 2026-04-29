@@ -134,11 +134,7 @@ const BookingCartPage = () => {
       />
 
       {/* ── Navbar ── */}
-      <TopBar
-        title="STAYEASE"
-        onMenuPress={() => console.log("Menu")}
-        onAvatarPress={() => console.log("Avatar pressed")}
-      />
+      <TopBar />
 
       {/* ── Scrollable body ── */}
       <Animated.ScrollView

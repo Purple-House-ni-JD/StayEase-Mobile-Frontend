@@ -1,7 +1,24 @@
-import { View, Text, TouchableOpacity, StyleSheet, Image } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+/**
+ * TopBar
+ * Reusable sticky navigation bar for all StayEase pages.
+ *
+ * Variants:
+ *   "default" — hamburger | STAYEASE brand | avatar (main pages)
+ *   "back"    — back arrow | page title     | optional right element (sub-pages)
+ *
+ * Examples:
+ *   <TopBar user={user} onMenuPress={openDrawer} />
+ *   <TopBar variant="back" title="Edit Profile" onBack={() => router.back()} />
+ *   <TopBar variant="back" title="Notifications" rightElement={<BellIcon />} />
+ */
 
-// ─── Design Tokens ────────────────────────────────────────────────────────────
+import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
+import { useAuth } from "@/context/AuthContext";
+
+// ─── Constants ────────────────────────────────────────────────────────────────
 const COLORS = {
   primary: "#0A1D37",
   secondary: "#C5A059",
@@ -12,70 +29,91 @@ const FONTS = {
   bold: "PlusJakartaSans-Bold",
 };
 
-// ─── TopBar Component ─────────────────────────────────────────────────────────
-/**
- * Reusable sticky top bar for StayEase pages.
- *
- * Props:
- * @param {function}      onMenuPress       - Called when the ☰ hamburger is pressed
- * @param {string}        [title]           - Center title (default: "STAYEASE")
- * @param {object}        [user]            - User object with optional `avatar`, `first_name`, `username`
- * @param {function}      [onAvatarPress]   - Called when the avatar/initial button is pressed
- * @param {ReactNode}     [rightElement]    - Optional custom element to replace the avatar button
- * @param {object}        [style]           - Extra style override for the outer wrapper
- */
-const TopBar = ({
-  onMenuPress,
-  title = "STAYEASE",
-  user,
-  onAvatarPress,
-  rightElement,
-  style,
-}) => {
+// ─── Private sub-components ───────────────────────────────────────────────────
+const AvatarButton = ({ user, onPress }) => {
+  const { user: authUser } = useAuth();
   const initial = (
-    user?.first_name?.[0] ||
-    user?.username?.[0] ||
+    authUser?.first_name?.[0] ??
+    authUser?.username?.[0] ??
     "G"
   ).toUpperCase();
+
+  return (
+    <TouchableOpacity
+      style={styles.avatarBtn}
+      onPress={onPress}
+      activeOpacity={0.8}
+    >
+      {authUser?.avatar_url ? (
+        <Image source={{ uri: authUser.avatar_url }} style={styles.avatarImage} />
+      ) : (
+        <View style={styles.avatarPlaceholder}>
+          <Text style={styles.avatarInitial}>{initial}</Text>
+        </View>
+      )}
+    </TouchableOpacity>
+  );
+};
+
+const IconButton = ({ icon, onPress, fontSize = 20 }) => (
+  <TouchableOpacity
+    style={styles.iconBtn}
+    onPress={onPress}
+    activeOpacity={0.7}
+  >
+    <Text style={[styles.iconText, { fontSize }]}>{icon}</Text>
+  </TouchableOpacity>
+);
+
+// ─── TopBar ───────────────────────────────────────────────────────────────────
+const TopBar = ({
+  variant = "default", // "default" | "back"
+  title = "STAYEASE", // Center label
+  rightElement, // Fully replaces the right slot
+  style, // Wrapper style override
+
+  // "default" variant
+  onMenuPress, // Hamburger handler
+  onAvatarPress, // Avatar tap (defaults to ProfilePage push)
+
+  // "back" variant
+  onBack, // Back arrow handler (defaults to router.back())
+}) => {
+  const router = useRouter();
+  const { user } = useAuth();
+
+  const isBack = variant === "back";
+  const resolvedBack = onBack ?? (() => router.back());
+  const resolvedAvatar =
+    onAvatarPress ?? (() => router.push("pages/ProfilePage"));
+
+  // Determine left / right slot content
+  const leftSlot = isBack ? (
+    <IconButton icon={<Ionicons name="arrow-back" size={24} color="white" />} onPress={resolvedBack} fontSize={22} />
+  ) : (
+    <IconButton icon={<Ionicons name="menu" size={24} color="white" />} onPress={onMenuPress} />
+  );
+
+  const rightSlot =
+    rightElement ??
+    (isBack ? (
+      <View style={styles.iconBtn} /> // invisible spacer keeps title centered
+    ) : (
+      <AvatarButton user={user} onPress={() => router.push("pages/ProfilePage")} />
+    ));
 
   return (
     <View style={[styles.wrapper, style]}>
       <SafeAreaView edges={["top"]} style={styles.safeArea}>
         <View style={styles.bar}>
-          {/* Left — Hamburger */}
-          <TouchableOpacity
-            style={styles.sideBtn}
-            onPress={onMenuPress}
-            activeOpacity={0.7}
+          {leftSlot}
+          <Text
+            style={[styles.title, isBack && styles.titleBack]}
+            numberOfLines={1}
           >
-            <Text style={styles.menuIcon}>☰</Text>
-          </TouchableOpacity>
-
-          {/* Center — Brand / Title */}
-          <Text style={styles.title}>{title}</Text>
-
-          {/* Right — Avatar or custom element */}
-          <View style={styles.sideBtn}>
-            {rightElement ?? (
-              <TouchableOpacity
-                style={styles.avatarBtn}
-                onPress={onAvatarPress}
-                activeOpacity={0.8}
-              >
-                {user?.avatar ? (
-                  // Replace with your actual image source as needed
-                  <Image
-                    source={{ uri: user.avatar }}
-                    style={styles.avatarImage}
-                  />
-                ) : (
-                  <View style={styles.avatarPlaceholder}>
-                    <Text style={styles.avatarInitial}>{initial}</Text>
-                  </View>
-                )}
-              </TouchableOpacity>
-            )}
-          </View>
+            {title}
+          </Text>
+          <View style={styles.rightSlot}>{rightSlot}</View>
         </View>
       </SafeAreaView>
     </View>
@@ -94,32 +132,42 @@ const styles = StyleSheet.create({
   bar: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
     paddingHorizontal: 20,
     paddingVertical: 12,
-    backgroundColor: COLORS.primary,
+    gap: 8,
   },
 
-  // ── Left / Right slots ──
-  sideBtn: {
+  // Slots
+  iconBtn: {
     width: 36,
+    height: 36,
     alignItems: "center",
     justifyContent: "center",
   },
-  menuIcon: {
-    fontSize: 20,
+  iconText: {
     color: COLORS.neutral,
+    lineHeight: 26,
+  },
+  rightSlot: {
+    width: 36,
+    alignItems: "flex-end",
   },
 
-  // ── Title ──
+  // Title
   title: {
+    flex: 1,
     fontFamily: FONTS.bold,
     fontSize: 14,
     color: COLORS.neutral,
     letterSpacing: 3,
+    textAlign: "center",
+  },
+  titleBack: {
+    letterSpacing: 0.5,
+    fontSize: 15,
   },
 
-  // ── Avatar ──
+  // Avatar
   avatarBtn: {
     width: 36,
     height: 36,

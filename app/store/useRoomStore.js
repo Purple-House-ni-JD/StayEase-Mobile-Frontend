@@ -6,11 +6,13 @@ const useRoomStore = create((set, get) => ({
   featuredProperty: null,
   searchQuery: "",
   activeCategory: "ALL",
+  activeTab: "home",
   cart: [],
   isRoomsLoading: false,
 
   setSearchQuery: (query) => set({ searchQuery: query }),
   setActiveCategory: (category) => set({ activeCategory: category }),
+  setActiveTab: (tab) => set({ activeTab: tab }),
 
   hydrateRooms: async () => {
     set({ isRoomsLoading: true });
@@ -55,7 +57,8 @@ const useRoomStore = create((set, get) => ({
     }
   },
 
-  getRoomById: (id) => get().rooms.find((room) => String(room.id) === String(id)),
+  getRoomById: (id) =>
+    get().rooms.find((room) => String(room.id) === String(id)),
 
   addToCart: ({ room, checkIn, checkOut, nights }) => {
     if (!room || !checkIn || !checkOut || nights <= 0) {
