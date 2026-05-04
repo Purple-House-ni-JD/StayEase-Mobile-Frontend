@@ -33,6 +33,7 @@ import TopBar from "../components/TopBar";
 import FormField from "../components/FormField";
 import SectionCard from "../components/SectionCard";
 import ProviderBadge from "../components/ProviderBadge";
+import AuthRequiredPrompt from "../components/AuthRequiredPrompt";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const COLORS = {
@@ -263,6 +264,11 @@ const EditProfilePage = () => {
       setSaving(false);
     }
   };
+
+  // Show authentication prompt if user is not logged in
+  if (!user) {
+    return <AuthRequiredPrompt featureName="profile editing" />;
+  }
 
   return (
     <View style={styles.root}>

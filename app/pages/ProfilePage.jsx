@@ -21,6 +21,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "expo-router";
 
 import { useAuth } from "@/context/AuthContext";
+import AuthRequiredPrompt from "../components/AuthRequiredPrompt";
 import { NAV_TABS, navigateToTab } from "../constants/navigation";
 import BottomNavBar from "../components/BottomNavBar";
 import TopBar from "../components/TopBar";
@@ -198,6 +199,11 @@ const ProfilePage = () => {
     navigateToTab(router, id);
   };
 
+  // Show authentication prompt if user is not logged in
+  if (!user) {
+    return <AuthRequiredPrompt featureName="your profile" />;
+  }
+
   return (
     <View style={styles.root}>
       <StatusBar
@@ -212,10 +218,7 @@ const ProfilePage = () => {
         contentContainerStyle={styles.scrollContent}
       >
         {/* Sticky header */}
-        <TopBar
-          onMenuPress={() => {
-          }}
-        />
+        <TopBar onMenuPress={() => {}} />
 
         {/* Hero */}
         <View style={styles.hero}>

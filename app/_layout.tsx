@@ -49,6 +49,7 @@ export default function RootLayout() {
         <Stack.Screen name="pages/EditProfilePage" options={{ headerShown: false }} />
         <Stack.Screen name="pages/PaymentMethodsPage" options={{ headerShown: false }} />
         <Stack.Screen name="pages/HelpSupportPage" options={{ headerShown: false }} />
+        <Stack.Screen name="pages/WishlistPage" options={{ headerShown: false }} />
       </Stack>
     </AuthProvider>
   );

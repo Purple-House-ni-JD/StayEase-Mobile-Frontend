@@ -104,9 +104,6 @@ const HomePage = () => {
     />
   );
 
-  // ✅ FIX: Wrap in useCallback so FlatList receives a stable reference.
-  // Without this, FlatList sees a new component type on every render and
-  // fully unmounts/remounts the header, which dismisses the keyboard.
   const renderHeader = useCallback(
     () => (
       <Animated.View
@@ -130,7 +127,7 @@ const HomePage = () => {
           placeholder="Search rooms..."
         />
 
-        <View style={styles.filterRow}>
+        {/* <View style={styles.filterRow}>
           <TouchableOpacity style={styles.filterChipActive} activeOpacity={0.8}>
             <Text style={styles.filterChipIcon}>📅</Text>
             <Text style={styles.filterChipTextActive}>Oct 12 - 15</Text>
@@ -140,7 +137,7 @@ const HomePage = () => {
             <Text style={styles.filterChipIcon}>👤</Text>
             <Text style={styles.filterChipText}>2 Guests</Text>
           </TouchableOpacity>
-        </View>
+        </View> */}
 
         <ScrollView
           horizontal
@@ -172,9 +169,9 @@ const HomePage = () => {
 
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Available Rooms</Text>
-          <TouchableOpacity activeOpacity={0.7}>
+          {/* <TouchableOpacity activeOpacity={0.7}>
             <Text style={styles.sectionViewAll}>View all</Text>
-          </TouchableOpacity>
+          </TouchableOpacity> */}
         </View>
       </Animated.View>
     ),

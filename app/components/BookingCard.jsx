@@ -23,6 +23,11 @@ const STATUS_CONFIG = {
     backgroundColor: COLORS.primary,
     textColor: COLORS.neutral,
   },
+  completed: {
+    label: "COMPLETED",
+    backgroundColor: "#4CAF50",
+    textColor: COLORS.neutral,
+  },
   cancelled: {
     label: "CANCELLED",
     backgroundColor: "#E5E3DE",
@@ -44,7 +49,7 @@ const STATUS_CONFIG = {
  *  - dateRange    {string}              Pre-formatted: "Oct 12 — Oct 15"
  *  - amount       {number|string}       e.g. 1240 or "1,240"
  *  - currency     {string}              e.g. "$" or "₱"  (default "₱")
- *  - status       {"active"|"pending"|"cancelled"}
+ *  - status       {"active"|"pending"|"completed"|"cancelled"}
  *  - onPress      {function}            Navigate to booking detail
  *  - style        {object}              Extra styles on the wrapper
  */
@@ -78,14 +83,14 @@ const BookingCard = ({
     >
       {/* ── Left gold accent bar (active/pending) or grey (cancelled) ── */}
       <View
-        // style={[
-        //   styles.accentBar,
-        //   {
-        //     backgroundColor: isCancelled
-        //       ? COLORS.inputBorder
-        //       : COLORS.secondary,
-        //   },
-        // ]}
+      // style={[
+      //   styles.accentBar,
+      //   {
+      //     backgroundColor: isCancelled
+      //       ? COLORS.inputBorder
+      //       : COLORS.secondary,
+      //   },
+      // ]}
       />
 
       {/* ── Thumbnail ── */}

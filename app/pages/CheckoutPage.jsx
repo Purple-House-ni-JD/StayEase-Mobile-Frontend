@@ -18,7 +18,7 @@ import BookingDetailCard from "../components/BookingDetailCard";
 import FormField from "../components/FormField";
 import PaymentMethodSelector from "../components/PaymentMethodSelector";
 import useRoomStore from "../store/useRoomStore";
-import { createBooking } from "@/services/bookingService";
+import { createBooking, createGuestBooking } from "@/services/bookingService";
 import { extractErrorMessage } from "@/lib/errorUtils";
 import { useAuth } from "@/context/AuthContext";
 import TopBar from "../components/TopBar";
@@ -161,13 +161,34 @@ const CheckoutPage = () => {
 
     try {
       setSubmitting(true);
-      const bookingResponse = await createBooking({
+
+      const bookingParams = {
         room_ids: cartItems.map((item) => item.roomId),
         check_in: cartItems[0].checkIn.toISOString().split("T")[0],
         check_out: cartItems[0].checkOut.toISOString().split("T")[0],
         guest_count: 1,
         payment_method: selectedPayment,
-      });
+      };
+
+      let bookingResponse;
+
+      if (user) {
+        // Authenticated user booking
+        bookingResponse = await createBooking(bookingParams);
+      } else {
+        // Guest booking - include guest details
+        const guestDetails = {
+          full_name: form.fullName,
+          email: form.email,
+          phone: form.phone,
+          region: form.region,
+        };
+        bookingResponse = await createGuestBooking({
+          ...bookingParams,
+          guest_details: guestDetails,
+        });
+      }
+
       clearCart();
 
       // Pass booking data to confirmation page

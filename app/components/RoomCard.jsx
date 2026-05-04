@@ -8,7 +8,13 @@ import {
 import HeartButton from "./HeartButton";
 import { COLORS, FONTS } from "../constants/colors";
 
-const RoomCard = ({ item, onPress, cardWidth }) => (
+const RoomCard = ({
+  item,
+  onPress,
+  cardWidth,
+  onRemove,
+  isInWishlist = false,
+}) => (
   <TouchableOpacity
     style={[styles.roomCard, { width: cardWidth }]}
     onPress={onPress}
@@ -16,16 +22,38 @@ const RoomCard = ({ item, onPress, cardWidth }) => (
   >
     {item.image ? (
       <ImageBackground
-        source={item.image}
+        source={
+          typeof item.image === "string" ? { uri: item.image } : item.image
+        }
         style={styles.roomImage}
         imageStyle={styles.roomImageRadius}
         resizeMode="cover"
       >
-        <HeartButton />
+        {isInWishlist && (
+          <HeartButton
+            initialLiked={true}
+            onLikeChange={(liked) => {
+              if (!liked && onRemove) {
+                onRemove();
+              }
+            }}
+            size="small"
+          />
+        )}
       </ImageBackground>
     ) : (
       <View style={[styles.roomImage, styles.roomImagePlaceholder]}>
-        <HeartButton />
+        {isInWishlist && (
+          <HeartButton
+            initialLiked={true}
+            onLikeChange={(liked) => {
+              if (!liked && onRemove) {
+                onRemove();
+              }
+            }}
+            size="small"
+          />
+        )}
       </View>
     )}
 

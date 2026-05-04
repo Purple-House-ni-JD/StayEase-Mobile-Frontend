@@ -24,8 +24,10 @@ import { useRouter } from "expo-router";
 
 import { getMyBookings } from "@/services/bookingService";
 import { extractErrorMessage } from "@/lib/errorUtils";
+import { useAuth } from "@/context/AuthContext";
 
 import PageHeader from "../components/PageHeader";
+import AuthRequiredPrompt from "../components/AuthRequiredPrompt";
 import SectionCard from "../components/SectionCard";
 import PaymentMethodBadge from "../components/PaymentMethodBadge";
 
@@ -115,6 +117,7 @@ const cardStyles = StyleSheet.create({
 // ─── Main Component ───────────────────────────────────────────────────────────
 const PaymentMethodsPage = () => {
   const router = useRouter();
+  const { user } = useAuth();
   const [usedMethods, setUsedMethods] = useState(new Set());
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -146,6 +149,11 @@ const PaymentMethodsPage = () => {
     };
     load();
   }, []);
+
+  // Show authentication prompt if user is not logged in
+  if (!user) {
+    return <AuthRequiredPrompt featureName="your payment methods" />;
+  }
 
   return (
     <View style={styles.root}>

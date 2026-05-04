@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import {
   Animated,
   Image,
@@ -10,7 +10,6 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { COLORS, FONTS } from "../constants/colors";
 import { Ionicons } from "@expo/vector-icons";
-
 
 /**
  * ImageHero
@@ -35,8 +34,14 @@ const ImageHero = ({
   const [liked, setLiked] = useState(wishlisted);
   const heartScale = useRef(new Animated.Value(1)).current;
 
+  // Sync liked state when wishlisted prop changes
+  useEffect(() => {
+    setLiked(wishlisted);
+  }, [wishlisted]);
+
   const handleHeart = () => {
     const next = !liked;
+    console.log("Heart clicked in ImageHero:", { current: liked, next });
     setLiked(next);
     onWishlist?.(next);
     Animated.sequence([

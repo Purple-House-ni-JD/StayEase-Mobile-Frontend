@@ -5,7 +5,7 @@ export const NAV_TABS = [
   { id: "home", icon: "🏠", label: "HOME" },
   { id: "cart", icon: "🛒", label: "CART" },
   { id: "bookings", icon: "📋", label: "BOOKINGS" },
-  { id: "profile", icon: "👤", label: "PROFILE" },
+  { id: "wishlist", icon: "❤️", label: "WISHLIST" },
 ];
 
 // Route mappings for navigation
@@ -13,7 +13,7 @@ export const NAV_ROUTES = {
   home: "pages/HomePage",
   cart: "pages/BookingCartPage",
   bookings: "pages/BookingsPage",
-  profile: "pages/ProfilePage",
+  wishlist: "pages/WishlistPage",
 };
 
 // Helper function for navigation

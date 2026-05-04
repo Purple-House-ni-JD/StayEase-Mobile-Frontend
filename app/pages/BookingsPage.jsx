@@ -22,6 +22,7 @@ import { getMyBookings } from "@/services/bookingService";
 import { extractErrorMessage } from "@/lib/errorUtils";
 import TopBar from "../components/TopBar";
 import { useAuth } from "@/context/AuthContext";
+import AuthRequiredPrompt from "../components/AuthRequiredPrompt";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -37,11 +38,10 @@ import { useAuth } from "@/context/AuthContext";
  * too — or you can hit the detail endpoint per booking if you need room names.
  */
 const mapBooking = (booking) => {
- 
   const statusMap = {
     pending: "pending",
     confirmed: "active",
-    completed: "active", // completed stays are still "active" style
+    completed: "completed", // completed stays get their own status
     cancelled: "cancelled",
   };
 
@@ -56,9 +56,6 @@ const mapBooking = (booking) => {
 
   return {
     id: String(booking.id),
-    // The list serializer has no room name — use booking_ref as the card title.
-    // If you later switch to the detail endpoint, replace with:
-    // booking.booking_rooms?.[0]?.room?.name ?? "Room Booking"
     roomName: `Booking #${booking.booking_ref}`,
     reference: booking.booking_ref,
     dateRange: `${formatDate(booking.check_in)} — ${formatDate(booking.check_out)}`,
@@ -140,6 +137,11 @@ const BookingsPage = () => {
   const handleBookingPress = (booking) => {
     router.push(`pages/BookingDetailPage?id=${booking.id}`);
   };
+
+  // Show authentication prompt if user is not logged in
+  if (!user) {
+    return <AuthRequiredPrompt featureName="your booking history" />;
+  }
 
   return (
     <View style={styles.container}>

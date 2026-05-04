@@ -110,6 +110,10 @@ const Onboarding = () => {
     router.push("pages/LoginPage");
   };
 
+  const handleContinueAsGuest = () => {
+    router.replace("pages/HomePage");
+  };
+
   return (
     <View style={styles.container}>
       <StatusBar
@@ -170,6 +174,14 @@ const Onboarding = () => {
           >
             <Text style={styles.getStartedText}>Get Started</Text>
             <Text style={styles.getStartedArrow}> →</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.guestBtn}
+            onPress={handleContinueAsGuest}
+            activeOpacity={0.88}
+          >
+            <Text style={styles.guestBtnText}>Continue as Guest</Text>
           </TouchableOpacity>
 
           <View style={styles.loginRow}>
@@ -292,7 +304,7 @@ const styles = StyleSheet.create({
   // ── Hero Content ──
   heroContent: {
     position: "absolute",
-    bottom: 240,
+    bottom: 320,
     left: 0,
     right: 0,
     paddingHorizontal: 24,
@@ -346,6 +358,24 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.label,
     fontSize: 18,
     color: COLORS.primary,
+  },
+  guestBtn: {
+    backgroundColor: "transparent",
+    borderRadius: 50,
+    paddingVertical: 16,
+    paddingHorizontal: 28,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1.5,
+    borderColor: COLORS.secondary,
+    marginBottom: 20,
+  },
+  guestBtnText: {
+    fontFamily: FONTS.label,
+    fontSize: 16,
+    color: COLORS.secondary,
+    letterSpacing: 0.3,
   },
   loginRow: {
     flexDirection: "row",
