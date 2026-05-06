@@ -20,7 +20,6 @@ import CalendarPicker from "../components/CalendarPicker";
 import PriceBreakdown from "../components/PriceBreakdown";
 import ReviewCard from "../components/ReviewCard";
 import ReviewForm from "../components/ReviewForm";
-import StarRating from "../components/StarRating";
 import useRoomStore from "../store/useRoomStore";
 import { useAuth } from "@/context/AuthContext";
 import { COLORS } from "../constants/colors";
@@ -36,7 +35,6 @@ import {
   submitReview,
   getUserCompletedBookingsForRoom,
 } from "@/services/reviewService";
-import { extractErrorMessage } from "@/lib/errorUtils";
 
 const diffNights = (checkIn, checkOut) => {
   if (!checkIn || !checkOut) return 0;
@@ -44,12 +42,20 @@ const diffNights = (checkIn, checkOut) => {
   return Math.max(0, Math.round(ms / (1000 * 60 * 60 * 24)));
 };
 
+/**
+ * Given a list of completed bookings (with booking_rooms), return the first
+ * one that contains roomId. Handles both { room: { id } } and { room: id } shapes.
+ */
+const findEligibleBooking = (bookings, roomId) =>
+  bookings.find((b) =>
+    b?.booking_rooms?.some(
+      (br) => String(br.room?.id ?? br.room) === String(roomId),
+    ),
+  ) ?? null;
+
 const RoomDetail = () => {
   const router = useRouter();
   const params = useGlobalSearchParams();
-
-  // FIX: roomId from URL params is always a string. Parse it once here so
-  // every downstream use (API calls, comparisons) is consistent.
   const roomId = parseInt(params.roomId, 10);
 
   const addToCart = useRoomStore((state) => state.addToCart);
@@ -68,6 +74,8 @@ const RoomDetail = () => {
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
   const [completedBookings, setCompletedBookings] = useState([]);
   const [isLoadingBookings, setIsLoadingBookings] = useState(false);
+  // Track which booking IDs the user has already reviewed this session
+  const [reviewedBookingIds, setReviewedBookingIds] = useState(new Set());
 
   const btnScale = useRef(new Animated.Value(1)).current;
 
@@ -92,7 +100,6 @@ const RoomDetail = () => {
         setIsLoading(false);
       }
     };
-
     if (roomId) loadRoom();
   }, [roomId]);
 
@@ -129,7 +136,6 @@ const RoomDetail = () => {
       try {
         setIsReviewsLoading(true);
         const data = await getReviewsByRoom(room.id);
-        // reviewService now always returns a plain array
         setReviews(Array.isArray(data) ? data : []);
       } catch (err) {
         console.error("Failed to load reviews:", err);
@@ -145,13 +151,10 @@ const RoomDetail = () => {
     const loadCompletedBookings = async () => {
       if (!room?.id || !user) {
         setCompletedBookings([]);
-        setIsLoadingBookings(false);
         return;
       }
       try {
         setIsLoadingBookings(true);
-        // FIX: getUserCompletedBookingsForRoom now fetches detail objects
-        // (which include booking_rooms) so the room membership filter works.
         const bookings = await getUserCompletedBookingsForRoom(room.id);
         setCompletedBookings(bookings);
       } catch (err) {
@@ -165,7 +168,13 @@ const RoomDetail = () => {
   }, [room?.id, user]);
 
   const nights = diffNights(checkIn, checkOut);
-  const canBook = nights > 0 && room;
+  const canBook = nights > 0 && !!room;
+
+  // The booking we'll use for review submission — exclude already-reviewed ones
+  const eligibleBooking = findEligibleBooking(
+    completedBookings.filter((b) => !reviewedBookingIds.has(b.id)),
+    roomId,
+  );
 
   const handleRangeChange = ({ checkIn: ci, checkOut: co }) => {
     setCheckIn(ci);
@@ -214,31 +223,27 @@ const RoomDetail = () => {
     }
   };
 
-  // FIX: handleReviewSubmit no longer calls getBookingDetail again —
-  // completedBookings already contains full detail objects (including
-  // booking_rooms) because getUserCompletedBookingsForRoom now fetches them.
-  // The redundant re-fetch and re-validation are removed; the backend
-  // serializer enforces all constraints server-side anyway.
   const handleReviewSubmit = async (reviewData) => {
+    if (!eligibleBooking) {
+      Alert.alert(
+        "No Eligible Booking",
+        "You need a completed booking for this room before you can write a review.",
+      );
+      return;
+    }
+
     try {
       setIsSubmittingReview(true);
 
-      const candidateBooking = completedBookings[0];
-      if (!candidateBooking) {
-        Alert.alert(
-          "No Eligible Booking",
-          "You need a completed booking for this room before you can write a review.",
-        );
-        return;
-      }
-
-      // submitReview coerces room/booking to integers internally (see reviewService.js)
       await submitReview({
-        room: room.id, // integer — parsed from roomId at top of component
-        booking: candidateBooking.id, // integer — from full detail object
+        room: room.id,
+        booking: eligibleBooking.id,
         rating: reviewData.rating,
         comment: reviewData.comment,
       });
+
+      // Mark this booking as reviewed so the button hides correctly
+      setReviewedBookingIds((prev) => new Set([...prev, eligibleBooking.id]));
 
       // Refresh reviews list
       const freshReviews = await getReviewsByRoom(room.id);
@@ -247,9 +252,8 @@ const RoomDetail = () => {
       setShowReviewForm(false);
       Alert.alert("Review Submitted", "Thank you for sharing your experience!");
     } catch (err) {
-      // Surface the exact backend error (e.g. "You have already reviewed this booking.")
-      const msg = extractErrorMessage(err);
-      Alert.alert("Could Not Submit Review", msg);
+      // err.message is always a clean string from reviewService.submitReview
+      Alert.alert("Could Not Submit Review", err.message);
     } finally {
       setIsSubmittingReview(false);
     }
@@ -327,7 +331,7 @@ const RoomDetail = () => {
             {room.description}
           </Text>
           <TouchableOpacity
-            onPress={() => setExpanded((value) => !value)}
+            onPress={() => setExpanded((v) => !v)}
             activeOpacity={0.7}
             style={styles.expandBtn}
           >
@@ -353,16 +357,14 @@ const RoomDetail = () => {
               <Text style={styles.loadingText}>Loading reviews...</Text>
             ) : (
               <View>
-                {/* Header row */}
                 <View style={styles.reviewsHeader}>
                   <Text style={styles.reviewsCount}>
                     {reviews.length}{" "}
                     {reviews.length === 1 ? "Review" : "Reviews"}
                   </Text>
 
-                  {/* Write Review button — only shown when user has an
-                      eligible completed booking AND is not already writing */}
-                  {user && !showReviewForm && completedBookings.length > 0 && (
+                  {/* Show "Write a Review" only when user has an un-reviewed eligible booking */}
+                  {user && !showReviewForm && eligibleBooking && (
                     <TouchableOpacity
                       style={styles.writeReviewBtn}
                       onPress={() => setShowReviewForm(true)}
@@ -385,15 +387,11 @@ const RoomDetail = () => {
                   )}
                 </View>
 
-                {/* Inline review form */}
                 {showReviewForm && user && (
                   <View style={styles.inlineReviewForm}>
-                    {/* FIX: roomId and bookingId are both passed so ReviewForm
-                        has everything it needs. bookingId was previously
-                        undefined because it was never passed as a prop. */}
                     <ReviewForm
                       roomId={room.id}
-                      bookingId={completedBookings[0]?.id}
+                      bookingId={eligibleBooking?.id}
                       onSubmit={handleReviewSubmit}
                       onCancel={() => setShowReviewForm(false)}
                       isSubmitting={isSubmittingReview}
@@ -401,7 +399,6 @@ const RoomDetail = () => {
                   </View>
                 )}
 
-                {/* Empty state */}
                 {reviews.length === 0 && !showReviewForm ? (
                   <View style={styles.emptyReviews}>
                     <Text style={styles.emptyReviewsTitle}>No reviews yet</Text>

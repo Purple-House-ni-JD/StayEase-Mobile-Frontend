@@ -114,7 +114,7 @@ const HomePage = () => {
       >
         <View style={styles.greetingSection}>
           <Text style={styles.greetingText}>
-            Good morning, {user?.first_name || "Guest"}
+            Good Day, {user?.first_name || "Guest"}
           </Text>
           <Text style={styles.greetingSubtext}>
             Find your perfect stay today.

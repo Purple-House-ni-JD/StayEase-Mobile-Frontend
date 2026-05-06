@@ -45,7 +45,10 @@ const AvatarButton = ({ user, onPress }) => {
       activeOpacity={0.8}
     >
       {authUser?.avatar_url ? (
-        <Image source={{ uri: authUser.avatar_url }} style={styles.avatarImage} />
+        <Image
+          source={{ uri: authUser.avatar_url }}
+          style={styles.avatarImage}
+        />
       ) : (
         <View style={styles.avatarPlaceholder}>
           <Text style={styles.avatarInitial}>{initial}</Text>
@@ -89,9 +92,16 @@ const TopBar = ({
 
   // Determine left / right slot content
   const leftSlot = isBack ? (
-    <IconButton icon={<Ionicons name="arrow-back" size={24} color="white" />} onPress={resolvedBack} fontSize={22} />
+    <IconButton
+      icon={<Ionicons name="arrow-back" size={24} color="white" />}
+      onPress={resolvedBack}
+      fontSize={22}
+    />
   ) : (
-    <IconButton icon={<Ionicons name="menu" size={24} color="white" />} onPress={onMenuPress} />
+    <IconButton
+      icon={<Ionicons name="menu" size={24} color="white" />}
+      onPress={onMenuPress}
+    />
   );
 
   const rightSlot =
@@ -99,7 +109,10 @@ const TopBar = ({
     (isBack ? (
       <View style={styles.iconBtn} /> // invisible spacer keeps title centered
     ) : (
-      <AvatarButton user={user} onPress={() => router.push("pages/ProfilePage")} />
+      <AvatarButton
+        user={user}
+        onPress={() => router.push("pages/ProfilePage")}
+      />
     ));
 
   return (

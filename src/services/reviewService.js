@@ -1,146 +1,113 @@
 import apiClient from "../lib/apiClient";
 
-/**
- * Get all reviews for a specific room.
- * Handles paginated { results: [...] } or plain array responses.
- *
- * @param {number|string} roomId
- * @returns {Promise<Array>}
- */
-export const getReviewsByRoom = async (roomId) => {
-  const response = await apiClient.get("/reviews/", {
-    params: { room: roomId },
-  });
-  const data = response.data;
-  return Array.isArray(data)
-    ? data
-    : Array.isArray(data?.results)
-      ? data.results
-      : [];
-};
+const unwrapList = (data) =>
+  Array.isArray(data) ? data : Array.isArray(data?.results) ? data.results : [];
+
+// ---------------------------------------------------------------------------
+// Reviews
+// ---------------------------------------------------------------------------
+
+export const getReviewsByRoom = (roomId) =>
+  apiClient
+    .get("/reviews/", { params: { room: roomId } })
+    .then((r) => unwrapList(r.data));
+
+export const getReviewDetail = (reviewId) =>
+  apiClient.get(`/reviews/${reviewId}/`).then((r) => r.data);
+
+export const updateReview = (reviewId, updates) =>
+  apiClient.patch(`/reviews/${reviewId}/`, updates).then((r) => r.data);
+
+export const deleteReview = (reviewId) =>
+  apiClient.delete(`/reviews/${reviewId}/`);
+
+// ---------------------------------------------------------------------------
+// Bookings (used by review flow)
+// ---------------------------------------------------------------------------
 
 /**
- * Get all reviews with optional filters.
- *
- * @param {object} filters - e.g. { ordering: "-created_at", room: 1 }
- * @returns {Promise<Array>}
- */
-export const getReviews = async (filters = {}) => {
-  const response = await apiClient.get("/reviews/", { params: filters });
-  const data = response.data;
-  return Array.isArray(data)
-    ? data
-    : Array.isArray(data?.results)
-      ? data.results
-      : [];
-};
-
-/**
- * Get a specific review by ID.
- *
- * @param {number} reviewId
- * @returns {Promise<object>}
- */
-export const getReviewDetail = async (reviewId) => {
-  const response = await apiClient.get(`/reviews/${reviewId}/`);
-  return response.data;
-};
-
-/**
- * Get full booking detail — used to verify a booking before submitting a review.
- *
- * @param {number} bookingId
- * @returns {Promise<object>} BookingDetailSerializer shape (includes booking_rooms)
- */
-export const getBookingDetail = async (bookingId) => {
-  const response = await apiClient.get(`/bookings/${bookingId}/`);
-  return response.data;
-};
-
-/**
- * Get the user's completed bookings that include a specific room.
- *
- * FIX: The list endpoint (/bookings/my/) uses BookingListSerializer which does
- * NOT include booking_rooms. We therefore cannot filter by room on the client
- * using the list response — that check always returned undefined/false, causing
- * completedBookings to always be empty.
- *
- * Strategy:
- *   1. Fetch all user bookings from the list endpoint.
- *   2. Filter client-side for status === "completed" only.
- *   3. For each candidate, fetch the full detail (which includes booking_rooms)
- *      and check that the room is present.
- *
- * The backend serializer already validates room membership on POST /reviews/,
- * so step 3 here is a UX guard — it gives the user a clear error message
- * instead of a silent 400 from the API.
- *
- * @param {number|string} roomId
- * @returns {Promise<Array>} BookingDetailSerializer objects that include roomId
+ * Returns the user's completed bookings that include a specific room.
+ * Fetches list first, then detail for each completed booking to get booking_rooms.
  */
 export const getUserCompletedBookingsForRoom = async (roomId) => {
-  const response = await apiClient.get("/bookings/my/");
-  const data = response.data;
-  const all = Array.isArray(data)
-    ? data
-    : Array.isArray(data?.results)
-      ? data.results
-      : [];
+  const all = await apiClient
+    .get("/bookings/my/")
+    .then((r) => unwrapList(r.data));
 
-  // Step 1: filter list for completed status only
-  const completedList = all.filter((b) => b.status === "completed");
+  const completed = all.filter((b) => b.status === "completed");
+  if (completed.length === 0) return [];
 
-  if (completedList.length === 0) return [];
-
-  // Step 2: fetch full detail for each completed booking so we have booking_rooms
-  const detailPromises = completedList.map(
-    (b) =>
+  const details = await Promise.all(
+    completed.map((b) =>
       apiClient
         .get(`/bookings/${b.id}/`)
         .then((r) => r.data)
-        .catch(() => null), // skip if a detail fetch fails
+        .catch(() => null),
+    ),
   );
-  const details = (await Promise.all(detailPromises)).filter(Boolean);
 
-  // Step 3: keep only those that actually contain this room
-  return details.filter((booking) =>
-    booking.booking_rooms?.some((br) => String(br.room?.id) === String(roomId)),
+  return details.filter((b) =>
+    b?.booking_rooms?.some(
+      (br) => String(br.room?.id ?? br.room) === String(roomId),
+    ),
   );
 };
+
+// ---------------------------------------------------------------------------
+// Submit
+// ---------------------------------------------------------------------------
 
 /**
  * Submit a new review.
- * @param {{ room: number|string, booking: number|string, rating: number, comment: string }} reviewData
- * @returns {Promise<object>} Created review
+ * On failure, throws an Error with a plain user-readable message extracted
+ * from the DRF response. Callers can do: catch(err) => Alert(..., err.message)
  */
 export const submitReview = async ({ room, booking, rating, comment }) => {
-  const response = await apiClient.post("/reviews/", {
-    room: parseInt(room, 10), // FIX: coerce string → integer
-    booking: parseInt(booking, 10), // FIX: coerce string → integer
-    rating,
-    comment,
-  });
-  return response.data;
+  try {
+    const { data } = await apiClient.post("/reviews/", {
+      room: Number(room),
+      booking: Number(booking),
+      rating,
+      comment,
+    });
+    return data;
+  } catch (err) {
+    // Re-throw with a human-readable message so callers don't need to parse anything.
+    throw new Error(extractApiError(err));
+  }
 };
 
-/**
- * Update an existing review (owner only).
- *
- * @param {number} reviewId
- * @param {{ rating?: number, comment?: string }} updates
- * @returns {Promise<object>}
- */
-export const updateReview = async (reviewId, updates) => {
-  const response = await apiClient.patch(`/reviews/${reviewId}/`, updates);
-  return response.data;
-};
+// ---------------------------------------------------------------------------
+// Internal helpers
+// ---------------------------------------------------------------------------
 
 /**
- * Delete a review (owner only).
- *
- * @param {number} reviewId
- * @returns {Promise<void>}
+ * Pulls the first readable error string out of an Axios error response.
+ * Handles DRF field errors, non_field_errors, and our custom error_code shape.
  */
-export const deleteReview = async (reviewId) => {
-  await apiClient.delete(`/reviews/${reviewId}/`);
-};
+function extractApiError(err) {
+  const data = err?.response?.data;
+
+  if (!data) {
+    // Network error or no response body
+    return err?.message || "Network error. Please check your connection.";
+  }
+
+  // Custom shape: { error: "...", error_code: "..." }
+  if (typeof data.error === "string") return data.error;
+
+  // DRF non_field_errors
+  if (Array.isArray(data.non_field_errors) && data.non_field_errors.length) {
+    return data.non_field_errors.join(" ");
+  }
+
+  // DRF field errors — flatten arrays, return first meaningful string
+  if (typeof data === "object") {
+    for (const value of Object.values(data)) {
+      const msg = Array.isArray(value) ? value[0] : value;
+      if (typeof msg === "string" && msg.trim()) return msg.trim();
+    }
+  }
+
+  return "Something went wrong. Please try again.";
+}

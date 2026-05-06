@@ -133,7 +133,7 @@ const WishlistPage = () => {
 
       {/* ── Page Header ── */}
       <View style={styles.header}>
-        <Text style={styles.pageTitle}>My Wishlist</Text>
+        <Text style={styles.pageTitle}>My Saved Rooms</Text>
         <Text style={styles.subtitle}>
           {wishlistRooms.length} {wishlistRooms.length === 1 ? "room" : "rooms"}{" "}
           saved
