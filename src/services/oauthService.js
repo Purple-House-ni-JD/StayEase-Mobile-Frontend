@@ -12,9 +12,6 @@ import * as WebBrowser from "expo-web-browser";
 import * as AuthSession from "expo-auth-session";
 import { makeRedirectUri } from "expo-auth-session";
 
-// ─── Environment detection ────────────────────────────────────────────────────
-// appOwnership === "expo"  → running inside Expo Go
-// appOwnership === null    → standalone / dev build
 const IS_EXPO_GO = Constants.appOwnership === "expo";
 
 // ─── Config ───────────────────────────────────────────────────────────────────
