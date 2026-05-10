@@ -46,13 +46,6 @@ export const googleOAuthLogin = async (idToken) => {
   return res.data; // { user, access, refresh }
 };
 
-export const facebookOAuthLogin = async (accessToken) => {
-  const res = await apiClient.post("/auth/oauth/facebook/", {
-    access_token: accessToken,
-  });
-  return res.data; // { user, access, refresh }
-};
-
 // ─── Profile ─────────────────────────────────────────────────────────────────
 
 /**

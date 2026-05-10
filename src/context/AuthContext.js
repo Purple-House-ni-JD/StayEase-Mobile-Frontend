@@ -7,13 +7,8 @@ import {
   saveTokens,
 } from "../lib/tokenStorage";
 import * as authService from "../services/authService";
-import {
-  googleSignIn,
-  facebookSignIn,
-  googleSignOut,
-  facebookSignOut,
-} from "../services/oauthService";
-import { googleOAuthLogin, facebookOAuthLogin } from "../services/authService";
+import { googleSignIn, googleSignOut } from "../services/oauthService";
+import { googleOAuthLogin } from "../services/authService";
 
 const AuthContext = createContext(null);
 
@@ -74,18 +69,6 @@ export const AuthProvider = ({ children }) => {
           throw error;
         }
       },
-      facebookSignIn: async () => {
-        try {
-          const oauthData = await facebookSignIn();
-          // Send Facebook access_token to backend
-          const data = await facebookOAuthLogin(oauthData.accessToken);
-          await saveTokens(data.access, data.refresh);
-          setUser(data.user);
-          return data.user;
-        } catch (error) {
-          throw error;
-        }
-      },
       logout: async () => {
         try {
           const refresh = await getRefreshToken();
@@ -94,7 +77,6 @@ export const AuthProvider = ({ children }) => {
           }
           // Sign out from OAuth providers
           await googleSignOut();
-          await facebookSignOut();
         } catch {
           // Ignore API logout failures and clear local state.
         } finally {
@@ -106,7 +88,6 @@ export const AuthProvider = ({ children }) => {
     }),
     [isLoading, user],
   );
-
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 

@@ -1,15 +1,16 @@
 /**
  * oauthService.js
  *
- * Handles Google and Facebook OAuth for both:
+ * Handles Google OAuth for both:
  *  - Expo Go (development) → browser-based flow via expo-auth-session
- *  - Production / Dev Build → native SDKs (@react-native-google-signin, react-native-fbsdk-next)
+ *  - Production / Dev Build → native SDKs (@react-native-google-signin)
  */
 
+import { Platform } from "react-native";
 import Constants from "expo-constants";
 import * as WebBrowser from "expo-web-browser";
 import * as AuthSession from "expo-auth-session";
-import { makeRedirectUri, useProxy } from "expo-auth-session";
+import { makeRedirectUri } from "expo-auth-session";
 
 // ─── Environment detection ────────────────────────────────────────────────────
 // appOwnership === "expo"  → running inside Expo Go
@@ -22,7 +23,13 @@ const GOOGLE_IOS_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID;
 const GOOGLE_ANDROID_CLIENT_ID =
   process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID;
 
-// Required by expo-auth-session to close the browser after redirect
+const isAndroid = Platform.OS === "android";
+const getGoogleClientId = () => {
+  if (IS_EXPO_GO) return GOOGLE_WEB_CLIENT_ID;
+  if (isAndroid) return GOOGLE_ANDROID_CLIENT_ID || GOOGLE_WEB_CLIENT_ID;
+  return GOOGLE_IOS_CLIENT_ID || GOOGLE_WEB_CLIENT_ID;
+};
+
 WebBrowser.maybeCompleteAuthSession();
 
 // ─── Lazy-load native SDKs (only used in production / dev builds) ─────────────
@@ -31,17 +38,13 @@ const getNativeGoogle = () => {
   return require("@react-native-google-signin/google-signin");
 };
 
-const getNativeFacebook = () => {
-  if (IS_EXPO_GO) return null;
-  return require("react-native-fbsdk-next");
-};
-
 // ─── Configure native Google SDK once (production only) ──────────────────────
 if (!IS_EXPO_GO) {
   const { GoogleSignin } = getNativeGoogle();
   GoogleSignin.configure({
     webClientId: GOOGLE_WEB_CLIENT_ID,
     iosClientId: GOOGLE_IOS_CLIENT_ID,
+    androidClientId: GOOGLE_ANDROID_CLIENT_ID,
     offlineAccess: true,
   });
 }
@@ -56,13 +59,9 @@ if (!IS_EXPO_GO) {
  */
 const googleSignInExpoGo = async () => {
   try {
-    // Get the appropriate client ID for the platform
-    let clientId = GOOGLE_WEB_CLIENT_ID;
-
-    // In Expo Go, we still need to use the correct client ID for the platform
-    // The auth proxy handles the redirect automatically
-    const redirectUri = AuthSession.makeRedirectUri({
-      useProxy: true,
+    const clientId = getGoogleClientId();
+    const redirectUri = makeRedirectUri({
+      useProxy: IS_EXPO_GO,
     });
 
     const discovery = await AuthSession.fetchDiscoveryAsync(
@@ -148,133 +147,6 @@ export const googleSignIn = IS_EXPO_GO
   : googleSignInNative;
 
 // ─────────────────────────────────────────────────────────────────────────────
-// FACEBOOK SIGN-IN
-// ─────────────────────────────────────────────────────────────────────────────
-
-/**
- * Expo Go path: Facebook OAuth flow using expo-auth-session.
- */
-const facebookSignInExpoGo = async () => {
-  try {
-    const FB_APP_ID = process.env.EXPO_PUBLIC_FACEBOOK_APP_ID;
-    if (!FB_APP_ID) {
-      throw new Error("Facebook App ID is not configured");
-    }
-
-    const redirectUri = AuthSession.makeRedirectUri({
-      useProxy: true,
-    });
-
-    const discovery = {
-      authorizationEndpoint: "https://www.facebook.com/dialog/oauth",
-      tokenEndpoint: "https://graph.facebook.com/v12.0/oauth/access_token",
-    };
-
-    const request = new AuthSession.AuthRequest({
-      clientId: FB_APP_ID,
-      scopes: ["public_profile", "email"],
-      redirectUri,
-      responseType: AuthSession.ResponseType.Code,
-    });
-
-    const result = await request.promptAsync(discovery);
-
-    if (result.type === "cancel" || result.type === "dismiss") {
-      throw new Error("Facebook login was cancelled");
-    }
-
-    if (result.type !== "success") {
-      throw new Error("Facebook sign-in failed");
-    }
-
-    // Exchange code for access token
-    const tokenResult = await AuthSession.exchangeCodeAsync(
-      {
-        clientId: FB_APP_ID,
-        code: result.params.code,
-        redirectUri,
-        extraParams: {
-          clientSecret: process.env.EXPO_PUBLIC_FACEBOOK_CLIENT_SECRET, // You'll need to add this to .env
-        },
-      },
-      discovery,
-    );
-
-    const accessToken = tokenResult.accessToken;
-
-    if (!accessToken) {
-      throw new Error("No access token received from Facebook");
-    }
-
-    // Fetch basic profile from Graph API
-    const profileRes = await fetch(
-      `https://graph.facebook.com/me?fields=id,name,first_name,last_name,email,picture&access_token=${accessToken}`,
-    );
-    const profile = await profileRes.json();
-
-    if (profile.error) {
-      throw new Error(profile.error.message);
-    }
-
-    return {
-      provider: "facebook",
-      accessToken,
-      user: {
-        id: profile.id,
-        name: profile.name,
-        firstName: profile.first_name,
-        lastName: profile.last_name,
-        email: profile.email,
-        avatar: profile.picture?.data?.url,
-      },
-    };
-  } catch (error) {
-    throw error;
-  }
-};
-
-/**
- * Production path: native Facebook SDK.
- */
-const facebookSignInNative = async () => {
-  const { LoginManager, AccessToken, Profile } = getNativeFacebook();
-  try {
-    const result = await LoginManager.logInWithPermissions([
-      "public_profile",
-      "email",
-    ]);
-
-    if (result.isCancelled) {
-      throw new Error("Facebook login was cancelled");
-    }
-
-    const data = await AccessToken.getCurrentAccessToken();
-    if (!data) throw new Error("Failed to get Facebook access token");
-
-    const profile = await Profile.getCurrentProfile();
-
-    return {
-      provider: "facebook",
-      accessToken: data.accessToken,
-      user: {
-        id: profile?.userID,
-        name: profile?.name,
-        firstName: profile?.firstName,
-        lastName: profile?.lastName,
-        avatar: profile?.imageURL,
-        email: profile?.email,
-      },
-    };
-  } catch (error) {
-    throw error;
-  }
-};
-
-export const facebookSignIn = IS_EXPO_GO
-  ? facebookSignInExpoGo
-  : facebookSignInNative;
-
-// ─────────────────────────────────────────────────────────────────────────────
 // SIGN-OUT
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -292,17 +164,6 @@ export const googleSignOut = async () => {
   try {
     const { GoogleSignin } = getNativeGoogle();
     await GoogleSignin.signOut();
-  } catch (error) {
-    // sign-out failure handled silently
-  }
-};
-
-export const facebookSignOut = async () => {
-  if (IS_EXPO_GO) return;
-
-  try {
-    const { LoginManager } = getNativeFacebook();
-    await LoginManager.logOut();
   } catch (error) {
     // sign-out failure handled silently
   }
