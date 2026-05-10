@@ -7,8 +7,6 @@ import {
   saveTokens,
 } from "../lib/tokenStorage";
 import * as authService from "../services/authService";
-import { googleSignIn, googleSignOut } from "../services/oauthService";
-import { googleOAuthLogin } from "../services/authService";
 
 const AuthContext = createContext(null);
 
@@ -57,26 +55,12 @@ export const AuthProvider = ({ children }) => {
         setUser(data.user);
         return data.user;
       },
-      googleSignIn: async () => {
-        try {
-          const oauthData = await googleSignIn();
-          // Send Google id_token to backend
-          const data = await googleOAuthLogin(oauthData.idToken);
-          await saveTokens(data.access, data.refresh);
-          setUser(data.user);
-          return data.user;
-        } catch (error) {
-          throw error;
-        }
-      },
       logout: async () => {
         try {
           const refresh = await getRefreshToken();
           if (refresh) {
             await authService.logout(refresh);
           }
-          // Sign out from OAuth providers
-          await googleSignOut();
         } catch {
           // Ignore API logout failures and clear local state.
         } finally {
