@@ -65,9 +65,6 @@ const googleSignInExpoGo = async () => {
       useProxy: true,
     });
 
-    console.log("Redirect URI:", redirectUri);
-    console.log("Using client ID:", clientId);
-
     const discovery = await AuthSession.fetchDiscoveryAsync(
       "https://accounts.google.com",
     );
@@ -84,14 +81,11 @@ const googleSignInExpoGo = async () => {
     // Prompt the user for authentication
     const result = await request.promptAsync(discovery);
 
-    console.log("Auth result type:", result.type);
-
     if (result.type === "cancel" || result.type === "dismiss") {
       throw new Error("Google sign-in was cancelled");
     }
 
     if (result.type !== "success") {
-      console.error("Auth result:", result);
       throw new Error("Google sign-in failed");
     }
 
@@ -108,8 +102,6 @@ const googleSignInExpoGo = async () => {
       discovery,
     );
 
-    console.log("Token received, has idToken:", !!tokenResult.idToken);
-
     if (!tokenResult.idToken) {
       throw new Error("No id_token received from Google");
     }
@@ -121,7 +113,6 @@ const googleSignInExpoGo = async () => {
       user: null,
     };
   } catch (error) {
-    console.error("Google sign-in error:", error);
     throw error;
   }
 };
@@ -174,8 +165,6 @@ const facebookSignInExpoGo = async () => {
       useProxy: true,
     });
 
-    console.log("Facebook Redirect URI:", redirectUri);
-
     const discovery = {
       authorizationEndpoint: "https://www.facebook.com/dialog/oauth",
       tokenEndpoint: "https://graph.facebook.com/v12.0/oauth/access_token",
@@ -195,7 +184,6 @@ const facebookSignInExpoGo = async () => {
     }
 
     if (result.type !== "success") {
-      console.error("Facebook auth result:", result);
       throw new Error("Facebook sign-in failed");
     }
 
@@ -241,7 +229,6 @@ const facebookSignInExpoGo = async () => {
       },
     };
   } catch (error) {
-    console.error("Facebook sign-in error:", error);
     throw error;
   }
 };
@@ -279,7 +266,6 @@ const facebookSignInNative = async () => {
       },
     };
   } catch (error) {
-    console.error("Facebook native sign-in error:", error);
     throw error;
   }
 };
@@ -298,7 +284,7 @@ export const googleSignOut = async () => {
     try {
       await WebBrowser.dismissBrowser();
     } catch (error) {
-      console.error("Error dismissing browser:", error);
+      // ignore dismiss browser failures in Expo Go
     }
     return;
   }
@@ -307,7 +293,7 @@ export const googleSignOut = async () => {
     const { GoogleSignin } = getNativeGoogle();
     await GoogleSignin.signOut();
   } catch (error) {
-    console.error("Google sign-out error:", error);
+    // sign-out failure handled silently
   }
 };
 
@@ -318,6 +304,6 @@ export const facebookSignOut = async () => {
     const { LoginManager } = getNativeFacebook();
     await LoginManager.logOut();
   } catch (error) {
-    console.error("Facebook sign-out error:", error);
+    // sign-out failure handled silently
   }
 };

@@ -295,7 +295,6 @@ const CheckoutPage = () => {
         </Animated.ScrollView>
       </KeyboardAvoidingView>
 
-      {/* ── Fixed Confirm Button ── */}
       <ConfirmButton onPress={handleConfirm} loading={submitting} />
     </View>
   );

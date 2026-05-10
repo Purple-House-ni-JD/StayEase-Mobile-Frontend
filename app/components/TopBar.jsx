@@ -13,10 +13,12 @@
  */
 
 import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
+import HamburgerMenu from "./HamburgerMenu";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const COLORS = {
@@ -70,18 +72,15 @@ const IconButton = ({ icon, onPress, fontSize = 20 }) => (
 
 // ─── TopBar ───────────────────────────────────────────────────────────────────
 const TopBar = ({
-  variant = "default", // "default" | "back"
-  title = "STAYEASE", // Center label
-  rightElement, // Fully replaces the right slot
-  style, // Wrapper style override
-
-  // "default" variant
-  onMenuPress, // Hamburger handler
-  onAvatarPress, // Avatar tap (defaults to ProfilePage push)
-
-  // "back" variant
-  onBack, // Back arrow handler (defaults to router.back())
+  variant = "default",
+  title = "STAYEASE",
+  rightElement,
+  style,
+  onMenuPress,
+  onAvatarPress,
+  onBack,
 }) => {
+  const [menuVisible, setMenuVisible] = useState(false);
   const router = useRouter();
   const { user } = useAuth();
 
@@ -100,14 +99,17 @@ const TopBar = ({
   ) : (
     <IconButton
       icon={<Ionicons name="menu" size={24} color="white" />}
-      onPress={onMenuPress}
+      onPress={() => {
+        setMenuVisible(true);
+        onMenuPress?.();
+      }}
     />
   );
 
   const rightSlot =
     rightElement ??
     (isBack ? (
-      <View style={styles.iconBtn} /> // invisible spacer keeps title centered
+      <View style={styles.iconBtn} />
     ) : (
       <AvatarButton
         user={user}
@@ -116,20 +118,26 @@ const TopBar = ({
     ));
 
   return (
-    <View style={[styles.wrapper, style]}>
-      <SafeAreaView edges={["top"]} style={styles.safeArea}>
-        <View style={styles.bar}>
-          {leftSlot}
-          <Text
-            style={[styles.title, isBack && styles.titleBack]}
-            numberOfLines={1}
-          >
-            {title}
-          </Text>
-          <View style={styles.rightSlot}>{rightSlot}</View>
-        </View>
-      </SafeAreaView>
-    </View>
+    <>
+      <View style={[styles.wrapper, style]}>
+        <SafeAreaView edges={["top"]} style={styles.safeArea}>
+          <View style={styles.bar}>
+            {leftSlot}
+            <Text
+              style={[styles.title, isBack && styles.titleBack]}
+              numberOfLines={1}
+            >
+              {title}
+            </Text>
+            <View style={styles.rightSlot}>{rightSlot}</View>
+          </View>
+        </SafeAreaView>
+      </View>
+      <HamburgerMenu
+        visible={menuVisible}
+        onClose={() => setMenuVisible(false)}
+      />
+    </>
   );
 };
 

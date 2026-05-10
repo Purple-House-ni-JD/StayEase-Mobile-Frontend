@@ -6,9 +6,7 @@ export const getWishlist = async () => {
 };
 
 export const addToWishlist = async (roomId) => {
-  console.log("Adding to wishlist:", roomId);
   const response = await apiClient.post("/wishlist/", { room_id: roomId });
-  console.log("Wishlist response:", response.data);
   return response.data;
 };
 

@@ -1,11 +1,6 @@
 export const extractErrorMessage = (error) => {
   const data = error?.response?.data;
 
-  // Debug: Log the error to see what we're getting
-  console.log("Error data:", data);
-  console.log("Error response:", error?.response);
-  console.log("Error status:", error?.response?.status);
-
   if (!data) {
     return "Network error. Please check your connection.";
   }

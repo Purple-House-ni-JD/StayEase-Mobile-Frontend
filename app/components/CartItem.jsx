@@ -68,7 +68,6 @@ const diffNights = (checkIn, checkOut) => {
  * @param {object}         [style]
  */
 const CartItem = ({ item, onRemove, style }) => {
-  // FIX: parseFloat handles both number and decimal string ("1500.00") from backend
   const pricePerNight = parseFloat(item.pricePerNight) || 0;
   const nights = diffNights(item.checkIn, item.checkOut);
   const subtotal = (pricePerNight * nights).toFixed(2);

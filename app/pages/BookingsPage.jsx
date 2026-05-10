@@ -59,10 +59,10 @@ const mapBooking = (booking) => {
     roomName: `Booking #${booking.booking_ref}`,
     reference: booking.booking_ref,
     dateRange: `${formatDate(booking.check_in)} — ${formatDate(booking.check_out)}`,
-    amount: parseFloat(booking.total_price) || 0, // FIX: backend sends decimal string
-    currency: "₱", // FIX: was "$ " which overrode the ₱ default
+    amount: parseFloat(booking.total_price) || 0,
+    currency: "₱",
     status: statusMap[booking.status] ?? "pending",
-    imageSource: null, // list endpoint has no images; detail endpoint would have them
+    imageSource: null,
     nights: booking.nights,
     guests: booking.guest_count,
   };
@@ -152,11 +152,7 @@ const BookingsPage = () => {
       />
 
       {/* ── Navbar ── */}
-      <TopBar
-        user={user}
-        onMenuPress={() => console.log("Menu pressed")}
-        onAvatarPress={() => console.log("Avatar pressed")}
-      />
+      <TopBar user={user} />
 
       {/* ── Page Header + Filter ── */}
       <View style={styles.header}>

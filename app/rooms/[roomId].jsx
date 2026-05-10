@@ -120,7 +120,7 @@ const RoomDetail = () => {
           raw.some((item) => String(item.room?.id) === String(room.id)),
         );
       } catch (err) {
-        console.error("Failed to load wishlist state:", err);
+        // failed to load wishlist state
       }
     };
     loadWishlistState();
@@ -138,7 +138,6 @@ const RoomDetail = () => {
         const data = await getReviewsByRoom(room.id);
         setReviews(Array.isArray(data) ? data : []);
       } catch (err) {
-        console.error("Failed to load reviews:", err);
         setReviews([]);
       } finally {
         setIsReviewsLoading(false);
@@ -158,7 +157,6 @@ const RoomDetail = () => {
         const bookings = await getUserCompletedBookingsForRoom(room.id);
         setCompletedBookings(bookings);
       } catch (err) {
-        console.error("Failed to load completed bookings:", err);
         setCompletedBookings([]);
       } finally {
         setIsLoadingBookings(false);
@@ -217,7 +215,6 @@ const RoomDetail = () => {
       }
       setIsWishlisted(liked);
     } catch (err) {
-      console.error("Wishlist toggle failed", err);
       Alert.alert("Error", "Could not update wishlist. Please try again.");
       setIsWishlisted((current) => !liked);
     }
@@ -422,8 +419,8 @@ const RoomDetail = () => {
                       key={review.id}
                       review={review}
                       isOwner={review.user === user?.id}
-                      onEdit={() => console.log("Edit review:", review.id)}
-                      onDelete={() => console.log("Delete review:", review.id)}
+                      onEdit={() => {}}
+                      onDelete={() => {}}
                     />
                   ))
                 )}

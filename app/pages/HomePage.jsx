@@ -214,8 +214,6 @@ const HomePage = () => {
         ListHeaderComponent={renderHeader}
         ListHeaderComponentStyle={styles.listHeader}
         ListFooterComponent={<View style={styles.listFooter} />}
-        // ✅ FIX: Prevents the FlatList from stealing taps (and focus) away
-        // from the keyboard while it's open.
         keyboardShouldPersistTaps="handled"
         ListEmptyComponent={
           !isRoomsLoading ? (

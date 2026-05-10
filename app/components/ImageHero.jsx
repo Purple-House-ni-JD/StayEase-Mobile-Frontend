@@ -41,7 +41,6 @@ const ImageHero = ({
 
   const handleHeart = () => {
     const next = !liked;
-    console.log("Heart clicked in ImageHero:", { current: liked, next });
     setLiked(next);
     onWishlist?.(next);
     Animated.sequence([

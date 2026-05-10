@@ -54,7 +54,7 @@ const ConfirmationPage = () => {
         const parsedData = JSON.parse(decodeURIComponent(params.bookingData));
         setBookingData(parsedData);
       } catch (error) {
-        console.error("Error parsing booking data:", error);
+        // Invalid booking data in route params
       }
     }
     setLoading(false);

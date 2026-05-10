@@ -43,7 +43,6 @@ export default function RootLayout() {
         <Stack.Screen name="pages/CheckoutPage" options={{ headerShown: false }} />
         <Stack.Screen name="pages/ConfirmationPage" options={{ headerShown: false }} />
         <Stack.Screen name="pages/ProfilePage" options={{ headerShown: false }} />
-        <Stack.Screen name="pages/RoomDetailPage" options={{ headerShown: false }} />
         <Stack.Screen name="pages/BookingDetailPage" options={{ headerShown: false }} />
         <Stack.Screen name="rooms/[roomId]" options={{ headerShown: false }} />
         <Stack.Screen name="pages/EditProfilePage" options={{ headerShown: false }} />

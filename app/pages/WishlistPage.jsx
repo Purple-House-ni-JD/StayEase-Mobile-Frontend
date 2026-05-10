@@ -125,11 +125,7 @@ const WishlistPage = () => {
       />
 
       {/* ── Navbar ── */}
-      <TopBar
-        user={user}
-        onMenuPress={() => console.log("Menu pressed")}
-        onAvatarPress={() => console.log("Avatar pressed")}
-      />
+      <TopBar user={user} />
 
       {/* ── Page Header ── */}
       <View style={styles.header}>

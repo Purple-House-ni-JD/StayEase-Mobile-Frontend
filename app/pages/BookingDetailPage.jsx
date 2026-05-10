@@ -289,7 +289,6 @@ const BookingDetailPage = () => {
         backgroundColor="transparent"
       />
 
-      {/* ── Fixed header ── */}
       <HeaderBar onBack={() => router.back()} />
 
       {/* ── Content ── */}

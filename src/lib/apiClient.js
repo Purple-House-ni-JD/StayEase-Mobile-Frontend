@@ -7,7 +7,6 @@ import {
 } from "./tokenStorage";
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL?.trim().split(",")[0];
-console.log("BASE_URL", BASE_URL);
 
 const apiClient = axios.create({
   baseURL: BASE_URL,

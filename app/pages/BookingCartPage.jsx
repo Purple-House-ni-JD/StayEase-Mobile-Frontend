@@ -54,7 +54,7 @@ const calcSubtotal = (items) =>
 const EmptyCart = () => (
   <View style={styles.emptyContainer}>
     <Text style={styles.emptyIcon}>🛏</Text>
-    <Text style={styles.emptyTitle}>Your cart is empty</Text>
+    <Text style={styles.emptyTitle}>Your Cart is empty</Text>
     <Text style={styles.emptySubtitle}>
       Browse our rooms and add your perfect stay.
     </Text>
@@ -93,7 +93,6 @@ const BookingCartPage = () => {
 
   // ── Derived values ──────────────────────────────────────────────────────────
   const subtotal = calcSubtotal(cartItems);
-  // FIX: Keep two decimal places throughout — Math.round() was dropping cents
   const serviceFee = parseFloat((subtotal * SERVICE_FEE_RATE).toFixed(2));
   const discountAmt = parseFloat(
     ((subtotal + serviceFee) * discount).toFixed(2),
