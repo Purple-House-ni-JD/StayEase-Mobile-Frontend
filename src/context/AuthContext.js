@@ -7,6 +7,7 @@ import {
   saveTokens,
 } from "../lib/tokenStorage";
 import * as authService from "../services/authService";
+import { googleSignIn } from "../services/oauthService";
 
 const AuthContext = createContext(null);
 
@@ -51,6 +52,13 @@ export const AuthProvider = ({ children }) => {
       },
       register: async (payload) => {
         const data = await authService.register(payload);
+        await saveTokens(data.access, data.refresh);
+        setUser(data.user);
+        return data.user;
+      },
+      googleSignIn: async () => {
+        const { idToken } = await googleSignIn();
+        const data = await authService.googleOAuthLogin(idToken);
         await saveTokens(data.access, data.refresh);
         setUser(data.user);
         return data.user;
