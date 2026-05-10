@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "StayEase-Mobile-Frontend",
+    "name": "StayEase",
     "slug": "stayease",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -32,8 +32,8 @@
         "expo-splash-screen",
         {
           "image": "./assets/images/SplashScreen.png",
-          "imageWidth": 200,
-          "imageHeight": 200,
+          "imageWidth": 1080,
+          "imageHeight": 2460,
           "resizeMode": "contain",
           "backgroundColor": "#0A1D37",
           "dark": {
@@ -42,7 +42,8 @@
         }
       ],
       "expo-font",
-      "expo-web-browser"
+      "expo-web-browser",
+      "expo-secure-store"
     ],
     "experiments": {
       "typedRoutes": true,
