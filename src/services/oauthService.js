@@ -1,11 +1,3 @@
-/**
- * oauthService.js
- *
- * Handles Google OAuth for both:
- *  - Expo Go (development) → browser-based flow via expo-auth-session
- *  - Production / Dev Build → native SDKs (@react-native-google-signin)
- */
-
 import { Platform } from "react-native";
 import Constants from "expo-constants";
 import * as WebBrowser from "expo-web-browser";
@@ -16,14 +8,13 @@ const IS_EXPO_GO = Constants.appOwnership === "expo";
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 const GOOGLE_WEB_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
-const GOOGLE_IOS_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID;
 const GOOGLE_ANDROID_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID;
 
 const isAndroid = Platform.OS === "android";
 const getGoogleClientId = () => {
   if (IS_EXPO_GO) return GOOGLE_WEB_CLIENT_ID;
   if (isAndroid) return GOOGLE_ANDROID_CLIENT_ID || GOOGLE_WEB_CLIENT_ID;
-  return GOOGLE_IOS_CLIENT_ID || GOOGLE_WEB_CLIENT_ID;
+  return GOOGLE_WEB_CLIENT_ID;
 };
 
 WebBrowser.maybeCompleteAuthSession();
@@ -39,7 +30,6 @@ if (!IS_EXPO_GO) {
   const { GoogleSignin } = getNativeGoogle();
   GoogleSignin.configure({
     webClientId: GOOGLE_WEB_CLIENT_ID,
-    iosClientId: GOOGLE_IOS_CLIENT_ID,
     androidClientId: GOOGLE_ANDROID_CLIENT_ID,
     offlineAccess: true,
   });
