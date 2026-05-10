@@ -57,8 +57,11 @@ export const AuthProvider = ({ children }) => {
         return data.user;
       },
       googleSignIn: async () => {
-        const { idToken } = await googleSignIn();
-        const data = await authService.googleOAuthLogin(idToken);
+        const oauthResult = await googleSignIn();
+        if (!oauthResult.idToken) {
+          throw new Error("No ID token received from Google OAuth");
+        }
+        const data = await authService.googleOAuthLogin(oauthResult.idToken);
         await saveTokens(data.access, data.refresh);
         setUser(data.user);
         return data.user;

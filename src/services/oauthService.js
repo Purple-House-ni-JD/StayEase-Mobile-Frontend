@@ -8,7 +8,8 @@ const IS_EXPO_GO = Constants.appOwnership === "expo";
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 const GOOGLE_WEB_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
-const GOOGLE_ANDROID_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID;
+const GOOGLE_ANDROID_CLIENT_ID =
+  process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID;
 
 const isAndroid = Platform.OS === "android";
 const getGoogleClientId = () => {
@@ -110,6 +111,11 @@ const googleSignInNative = async () => {
   try {
     await GoogleSignin.hasPlayServices();
     const userInfo = await GoogleSignin.signIn();
+
+    if (!userInfo.idToken) {
+      throw new Error("No id_token received from native Google Sign-In");
+    }
+
     return {
       provider: "google",
       idToken: userInfo.idToken,
