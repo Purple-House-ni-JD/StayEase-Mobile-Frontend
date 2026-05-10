@@ -1,11 +1,3 @@
-/**
- * oauthService.js
- *
- * Handles Google OAuth for both:
- *  - Expo Go (development) → browser-based flow via expo-auth-session
- *  - Production / Dev Build → native SDKs (@react-native-google-signin)
- */
-
 import { Platform } from "react-native";
 import Constants from "expo-constants";
 import * as WebBrowser from "expo-web-browser";
