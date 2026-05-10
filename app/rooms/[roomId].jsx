@@ -86,9 +86,7 @@ const RoomDetail = () => {
         const payload = await getRoomDetail(roomId);
         setRoom({
           ...payload,
-          image: payload.image_urls?.[0]
-            ? { uri: payload.image_urls[0] }
-            : null,
+          image_urls: payload.image_urls || [],
           review_count: 0,
           amenities: (payload.amenities || []).map((a) => ({
             id: a.id,
@@ -295,8 +293,8 @@ const RoomDetail = () => {
         contentContainerStyle={styles.scrollContent}
       >
         <ImageHero
-          source={room.image}
-          height={300}
+          sources={room.image_urls}
+          height={320}
           onBack={() => router.back()}
           wishlisted={isWishlisted}
           onWishlist={handleWishlist}
@@ -304,17 +302,27 @@ const RoomDetail = () => {
 
         <View style={styles.card}>
           <View style={styles.badge}>
-            <Text style={styles.badgeText}>{room.category}</Text>
+            <Text style={styles.badgeText}>
+              {room.category_display ?? room.category}
+            </Text>
           </View>
 
           <Text style={styles.roomName}>{room.name}</Text>
 
           <View style={styles.metaRow}>
-            <RatingBadge rating={room.rating} reviewCount={room.review_count} />
+            <View style={styles.metaLeft}>
+              <RatingBadge
+                rating={room.rating}
+                reviewCount={room.review_count}
+              />
+            </View>
             <PriceTag amount={room.price_per_night} size="lg" suffix="/night" />
           </View>
 
           <View style={styles.amenitiesRow}>
+            <View style={styles.guestPill}>
+              <Text style={styles.guestText}>👤 {room.max_guest} guests</Text>
+            </View>
             {room.amenities.map((a) => (
               <AmenityChip key={a.id} icon={a.icon} label={a.label} />
             ))}
@@ -523,6 +531,24 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 20,
+  },
+  metaLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  guestPill: {
+    backgroundColor: COLORS.badgeBg,
+    borderRadius: 50,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  guestText: {
+    fontFamily: "PlusJakartaSans-Regular",
+    fontSize: 12,
+    color: COLORS.badgeText,
   },
   amenitiesRow: {
     flexDirection: "row",

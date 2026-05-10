@@ -16,6 +16,7 @@ export const COLORS = {
   badgeBg: "rgba(197,160,89,0.15)",
   badgeText: "#A07830",
   danger: "#C0392B",
+  heartActive: "#E74C3C",
 };
 
 export const FONTS = {
