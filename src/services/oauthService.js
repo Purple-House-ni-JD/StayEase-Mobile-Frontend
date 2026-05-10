@@ -18,11 +18,6 @@ const IS_EXPO_GO = Constants.appOwnership === "expo";
 const GOOGLE_WEB_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
 const GOOGLE_IOS_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID;
 const GOOGLE_ANDROID_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID;
-console.log("Google Client IDs:", {
-  web: GOOGLE_WEB_CLIENT_ID ? "✓" : "✗",
-  ios: GOOGLE_IOS_CLIENT_ID ? "✓" : "✗",
-  android: GOOGLE_ANDROID_CLIENT_ID ? "✓" : "✗",
-});
 
 const isAndroid = Platform.OS === "android";
 const getGoogleClientId = () => {
