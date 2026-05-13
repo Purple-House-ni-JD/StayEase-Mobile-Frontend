@@ -280,6 +280,7 @@ const RoomDetail = () => {
     ]).start();
     addToCart({ room, checkIn, checkOut, nights });
     setAdded(true);
+    router.push("pages/BookingCartPage");
   };
 
   const handleWishlist = async (liked) => {
@@ -623,11 +624,7 @@ const RoomDetail = () => {
             disabled={!canBook}
           >
             <Text style={styles.ctaText}>
-              {added
-                ? "✓  Added to cart"
-                : canBook
-                  ? "Reserve now"
-                  : "Select dates to continue"}
+              {canBook ? "Review & Pay" : "Select dates to continue"}
             </Text>
           </TouchableOpacity>
         </Animated.View>

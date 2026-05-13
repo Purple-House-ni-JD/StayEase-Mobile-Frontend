@@ -156,7 +156,7 @@ export const MOCK_BOOKINGS = [
 // Filter Tabs for Bookings
 export const FILTER_TABS = [
   { id: "all", label: "ALL" },
-  { id: "active", label: "ACTIVE" },
+  { id: "confirmed", label: "CONFIRMED" },
   { id: "pending", label: "PENDING" },
   { id: "completed", label: "COMPLETED" },
   { id: "cancelled", label: "CANCELLED" },
