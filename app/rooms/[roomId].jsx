@@ -24,7 +24,7 @@ import useRoomStore from "../store/useRoomStore";
 import { useAuth } from "@/context/AuthContext";
 import { COLORS } from "../constants/colors";
 import { POLICY_ICONS } from "../constants/mockData";
-import { getRoomDetail } from "@/services/roomService";
+import { getRoomDetail, getRoomBookedDates } from "@/services/roomService";
 import {
   addToWishlist,
   getWishlist,
@@ -42,10 +42,6 @@ const diffNights = (checkIn, checkOut) => {
   return Math.max(0, Math.round(ms / (1000 * 60 * 60 * 24)));
 };
 
-/**
- * Given a list of completed bookings (with booking_rooms), return the first
- * one that contains roomId. Handles both { room: { id } } and { room: id } shapes.
- */
 const findEligibleBooking = (bookings, roomId) =>
   bookings.find((b) =>
     b?.booking_rooms?.some(
@@ -53,6 +49,83 @@ const findEligibleBooking = (bookings, roomId) =>
     ),
   ) ?? null;
 
+// ─── Divider ──────────────────────────────────────────────────────────────────
+const Divider = ({ style }) => <View style={[dividerStyles.line, style]} />;
+const dividerStyles = StyleSheet.create({
+  line: {
+    height: 1,
+    backgroundColor: COLORS.inputBorder,
+    marginVertical: 24,
+  },
+});
+
+// ─── Section Label ─────────────────────────────────────────────────────────────
+const SectionLabel = ({ children, style }) => (
+  <Text style={[sectionLabelStyles.text, style]}>{children}</Text>
+);
+const sectionLabelStyles = StyleSheet.create({
+  text: {
+    fontFamily: "PlusJakartaSans-Bold",
+    fontSize: 10,
+    letterSpacing: 2.5,
+    color: COLORS.secondary,
+    textTransform: "uppercase",
+    marginBottom: 14,
+  },
+});
+
+// ─── Policy Row ────────────────────────────────────────────────────────────────
+const PolicyRow = ({ icon, title, description }) => (
+  <View style={policyStyles.row}>
+    <View style={policyStyles.iconWrap}>
+      <Text style={policyStyles.icon}>{icon}</Text>
+    </View>
+    <View style={policyStyles.textWrap}>
+      <Text style={policyStyles.title}>{title}</Text>
+      <Text style={policyStyles.desc}>{description}</Text>
+    </View>
+  </View>
+);
+const policyStyles = StyleSheet.create({
+  row: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 14,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.inputBorder,
+  },
+  iconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: COLORS.badgeBg,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  icon: {
+    fontSize: 16,
+    lineHeight: 20,
+  },
+  textWrap: {
+    flex: 1,
+    paddingTop: 1,
+  },
+  title: {
+    fontFamily: "PlusJakartaSans-Bold",
+    fontSize: 13,
+    color: COLORS.primary,
+    marginBottom: 2,
+  },
+  desc: {
+    fontFamily: "PlusJakartaSans-Regular",
+    fontSize: 12.5,
+    color: COLORS.textMuted,
+    lineHeight: 19,
+  },
+});
+
+// ─── Main Component ────────────────────────────────────────────────────────────
 const RoomDetail = () => {
   const router = useRouter();
   const params = useGlobalSearchParams();
@@ -74,7 +147,7 @@ const RoomDetail = () => {
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
   const [completedBookings, setCompletedBookings] = useState([]);
   const [isLoadingBookings, setIsLoadingBookings] = useState(false);
-  // Track which booking IDs the user has already reviewed this session
+  const [bookedDates, setBookedDates] = useState([]);
   const [reviewedBookingIds, setReviewedBookingIds] = useState(new Set());
 
   const btnScale = useRef(new Animated.Value(1)).current;
@@ -117,9 +190,7 @@ const RoomDetail = () => {
         setIsWishlisted(
           raw.some((item) => String(item.room?.id) === String(room.id)),
         );
-      } catch (err) {
-        // failed to load wishlist state
-      }
+      } catch (err) {}
     };
     loadWishlistState();
   }, [room?.id, user]);
@@ -145,6 +216,22 @@ const RoomDetail = () => {
   }, [room?.id]);
 
   useEffect(() => {
+    const loadBookedDates = async () => {
+      if (!room?.id) {
+        setBookedDates([]);
+        return;
+      }
+      try {
+        const dates = await getRoomBookedDates(room.id);
+        setBookedDates(dates);
+      } catch (err) {
+        setBookedDates([]);
+      }
+    };
+    loadBookedDates();
+  }, [room?.id]);
+
+  useEffect(() => {
     const loadCompletedBookings = async () => {
       if (!room?.id || !user) {
         setCompletedBookings([]);
@@ -166,7 +253,6 @@ const RoomDetail = () => {
   const nights = diffNights(checkIn, checkOut);
   const canBook = nights > 0 && !!room;
 
-  // The booking we'll use for review submission — exclude already-reviewed ones
   const eligibleBooking = findEligibleBooking(
     completedBookings.filter((b) => !reviewedBookingIds.has(b.id)),
     roomId,
@@ -237,17 +323,14 @@ const RoomDetail = () => {
         comment: reviewData.comment,
       });
 
-      // Mark this booking as reviewed so the button hides correctly
       setReviewedBookingIds((prev) => new Set([...prev, eligibleBooking.id]));
 
-      // Refresh reviews list
       const freshReviews = await getReviewsByRoom(room.id);
       setReviews(Array.isArray(freshReviews) ? freshReviews : []);
 
       setShowReviewForm(false);
       Alert.alert("Review Submitted", "Thank you for sharing your experience!");
     } catch (err) {
-      // err.message is always a clean string from reviewService.submitReview
       Alert.alert("Could Not Submit Review", err.message);
     } finally {
       setIsSubmittingReview(false);
@@ -280,6 +363,10 @@ const RoomDetail = () => {
     );
   }
 
+  const totalPrice =
+    parseFloat(room.price_per_night) * nights +
+    Math.round(parseFloat(room.price_per_night) * nights * 0.1);
+
   return (
     <View style={styles.container}>
       <StatusBar
@@ -292,43 +379,91 @@ const RoomDetail = () => {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
+        {/* ── Hero ── */}
         <ImageHero
           sources={room.image_urls}
-          height={320}
+          height={340}
           onBack={() => router.back()}
           wishlisted={isWishlisted}
           onWishlist={handleWishlist}
         />
 
+        {/* ── Content Card ── */}
         <View style={styles.card}>
-          <View style={styles.badge}>
-            <Text style={styles.badgeText}>
-              {room.category_display ?? room.category}
-            </Text>
+          {/* Category + Availability row */}
+          <View style={styles.topMeta}>
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>
+                {room.category_display ?? room.category}
+              </Text>
+            </View>
+            <View
+              style={[
+                styles.availabilityDot,
+                room.availability_status
+                  ? styles.dotAvailable
+                  : styles.dotUnavailable,
+              ]}
+            >
+              <View
+                style={[
+                  styles.dotInner,
+                  room.availability_status
+                    ? styles.dotInnerAvailable
+                    : styles.dotInnerUnavailable,
+                ]}
+              />
+              <Text
+                style={[
+                  styles.availabilityText,
+                  room.availability_status
+                    ? styles.available
+                    : styles.notAvailable,
+                ]}
+              >
+                {room.availability_status ? "Available" : "Unavailable"}
+              </Text>
+            </View>
           </View>
 
+          {/* Room name */}
           <Text style={styles.roomName}>{room.name}</Text>
 
-          <View style={styles.metaRow}>
-            <View style={styles.metaLeft}>
-              <RatingBadge
-                rating={room.rating}
-                reviewCount={room.review_count}
-              />
-            </View>
+          {/* Rating + Price row */}
+          <View style={styles.ratingPriceRow}>
+            <RatingBadge rating={room.rating} reviewCount={room.review_count} />
             <PriceTag amount={room.price_per_night} size="lg" suffix="/night" />
           </View>
 
-          <View style={styles.amenitiesRow}>
+          {/* Capacity pill */}
+          <View style={styles.guestRow}>
             <View style={styles.guestPill}>
-              <Text style={styles.guestText}>👤 {room.max_guest} guests</Text>
+              <Text style={styles.guestIcon}>👤</Text>
+              <Text style={styles.guestText}>
+                Up to {room.max_guest} guests
+              </Text>
             </View>
+          </View>
+
+          <Divider />
+
+          {/* ── Amenities ── */}
+          <SectionLabel>Amenities</SectionLabel>
+          <View style={styles.amenitiesGrid}>
             {room.amenities.map((a) => (
-              <AmenityChip key={a.id} icon={a.icon} label={a.label} />
+              <AmenityChip
+                key={a.id}
+                icon={a.icon}
+                label={a.label}
+                style={styles.amenityChip}
+              />
             ))}
           </View>
 
-          <SectionHeader title="Description" style={styles.sectionSpacing} />
+          <Divider />
+
+          {/* ── Description ── */}
+          <SectionLabel>About this room</SectionLabel>
           <Text
             style={styles.description}
             numberOfLines={expanded ? undefined : 4}
@@ -345,53 +480,64 @@ const RoomDetail = () => {
             </Text>
           </TouchableOpacity>
 
-          <SectionHeader title="Select Dates" style={styles.sectionSpacing} />
-          <CalendarPicker onRangeChange={handleRangeChange} />
+          <Divider />
+
+          {/* ── Select Dates ── */}
+          <SectionLabel>Select dates</SectionLabel>
+          <CalendarPicker
+            onRangeChange={handleRangeChange}
+            disabledDates={bookedDates}
+          />
 
           {canBook && (
             <PriceBreakdown
               pricePerNight={room.price_per_night}
               nights={nights}
-              style={styles.sectionSpacing}
+              style={styles.priceBreakdown}
             />
           )}
 
-          <SectionHeader title="Reviews" style={styles.sectionSpacing} />
+          <Divider />
+
+          {/* ── Reviews ── */}
+          <View style={styles.reviewsHeader}>
+            <SectionLabel style={{ marginBottom: 0 }}>
+              {reviews.length} {reviews.length === 1 ? "Review" : "Reviews"}
+            </SectionLabel>
+
+            {user && !showReviewForm && eligibleBooking && (
+              <TouchableOpacity
+                style={styles.writeReviewBtn}
+                onPress={() => setShowReviewForm(true)}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.writeReviewBtnText}>✦ Write a Review</Text>
+              </TouchableOpacity>
+            )}
+
+            {user && showReviewForm && (
+              <TouchableOpacity
+                style={[styles.writeReviewBtn, styles.cancelReviewBtn]}
+                onPress={() => setShowReviewForm(false)}
+                activeOpacity={0.8}
+              >
+                <Text
+                  style={[
+                    styles.writeReviewBtnText,
+                    styles.cancelReviewBtnText,
+                  ]}
+                >
+                  Cancel
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
           <View style={styles.reviewsSection}>
             {isReviewsLoading ? (
-              <Text style={styles.loadingText}>Loading reviews...</Text>
+              <Text style={styles.loadingText}>Loading reviews…</Text>
             ) : (
               <View>
-                <View style={styles.reviewsHeader}>
-                  <Text style={styles.reviewsCount}>
-                    {reviews.length}{" "}
-                    {reviews.length === 1 ? "Review" : "Reviews"}
-                  </Text>
-
-                  {/* Show "Write a Review" only when user has an un-reviewed eligible booking */}
-                  {user && !showReviewForm && eligibleBooking && (
-                    <TouchableOpacity
-                      style={styles.writeReviewBtn}
-                      onPress={() => setShowReviewForm(true)}
-                      activeOpacity={0.8}
-                    >
-                      <Text style={styles.writeReviewBtnText}>
-                        Write a Review
-                      </Text>
-                    </TouchableOpacity>
-                  )}
-
-                  {user && showReviewForm && (
-                    <TouchableOpacity
-                      style={[styles.writeReviewBtn, styles.cancelReviewBtn]}
-                      onPress={() => setShowReviewForm(false)}
-                      activeOpacity={0.8}
-                    >
-                      <Text style={styles.writeReviewBtnText}>Cancel</Text>
-                    </TouchableOpacity>
-                  )}
-                </View>
-
                 {showReviewForm && user && (
                   <View style={styles.inlineReviewForm}>
                     <ReviewForm
@@ -409,15 +555,15 @@ const RoomDetail = () => {
                     <Text style={styles.emptyReviewsTitle}>No reviews yet</Text>
                     {user && completedBookings.length === 0 ? (
                       <Text style={styles.emptyReviewsSubtitle}>
-                        Complete a booking at this room to write a review!
+                        Complete a booking at this room to write a review.
                       </Text>
                     ) : user ? (
                       <Text style={styles.emptyReviewsSubtitle}>
-                        Be the first to share your experience!
+                        Be the first to share your experience.
                       </Text>
                     ) : (
                       <Text style={styles.emptyReviewsSubtitle}>
-                        Login to see reviews and write your own!
+                        Log in to see and write reviews.
                       </Text>
                     )}
                   </View>
@@ -436,44 +582,51 @@ const RoomDetail = () => {
             )}
           </View>
 
-          <SectionHeader title="Policies" style={styles.sectionSpacing} />
+          <Divider />
+
+          {/* ── Policies ── */}
+          <SectionLabel>House policies</SectionLabel>
           <View style={styles.policiesList}>
-            {room.policies.map((policy) => (
-              <View key={policy.id} style={styles.policyRow}>
-                <Text style={styles.policyIcon}>
-                  {POLICY_ICONS[policy.type] ?? "ℹ️"}
-                </Text>
-                <View style={styles.policyText}>
-                  <Text style={styles.policyTitle}>{policy.title}</Text>
-                  <Text style={styles.policyDesc}>{policy.description}</Text>
-                </View>
-              </View>
+            {room.policies.map((policy, idx) => (
+              <PolicyRow
+                key={policy.id}
+                icon={POLICY_ICONS[policy.type] ?? "ℹ️"}
+                title={policy.title}
+                description={policy.description}
+              />
             ))}
           </View>
 
-          <View style={{ height: 32 }} />
+          <View style={{ height: 16 }} />
         </View>
       </ScrollView>
 
+      {/* ── CTA Bar ── */}
       <View style={styles.ctaWrapper}>
-        <Animated.View style={{ transform: [{ scale: btnScale }] }}>
+        {canBook && (
+          <View style={styles.ctaNightsSummary}>
+            <Text style={styles.ctaNightsText}>
+              {nights} night{nights !== 1 ? "s" : ""}
+            </Text>
+            <Text style={styles.ctaTotalText}>
+              ₱{totalPrice.toLocaleString("en-PH")} total
+            </Text>
+          </View>
+        )}
+        <Animated.View
+          style={[styles.ctaBtnWrap, { transform: [{ scale: btnScale }] }]}
+        >
           <TouchableOpacity
             style={[styles.ctaBtn, !canBook && styles.ctaBtnDisabled]}
             onPress={handleAddToCart}
             activeOpacity={canBook ? 0.88 : 1}
             disabled={!canBook}
           >
-            <Text style={styles.ctaIcon}>🛒</Text>
             <Text style={styles.ctaText}>
               {added
-                ? "Added to cart"
+                ? "✓  Added to cart"
                 : canBook
-                  ? `Add to Booking Cart · ₱${(
-                      parseFloat(room.price_per_night) * nights +
-                      Math.round(
-                        parseFloat(room.price_per_night) * nights * 0.1,
-                      )
-                    ).toLocaleString("en-PH")}`
+                  ? "Reserve now"
                   : "Select dates to continue"}
             </Text>
           </TouchableOpacity>
@@ -489,81 +642,130 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
   },
   scrollContent: {
-    paddingBottom: 120,
+    paddingBottom: 130,
   },
+
+  // ── Card ──────────────────────────────────────────────────────────────────
   card: {
     backgroundColor: COLORS.neutral,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    marginTop: -20,
-    paddingHorizontal: 22,
-    paddingTop: 26,
-    paddingBottom: 16,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    marginTop: -24,
+    paddingHorizontal: 24,
+    paddingTop: 28,
+    paddingBottom: 20,
     shadowColor: "#000",
-    shadowOpacity: 0.06,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: -4 },
-    elevation: 8,
+    shadowOpacity: 0.07,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: -6 },
+    elevation: 10,
+  },
+
+  // ── Top meta ──────────────────────────────────────────────────────────────
+  topMeta: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 14,
   },
   badge: {
-    alignSelf: "flex-start",
     backgroundColor: COLORS.badgeBg,
     borderRadius: 50,
     paddingHorizontal: 12,
     paddingVertical: 5,
-    marginBottom: 12,
   },
   badgeText: {
     fontFamily: "PlusJakartaSans-Bold",
-    fontSize: 10.5,
+    fontSize: 10,
     color: COLORS.badgeText,
-    letterSpacing: 1.5,
+    letterSpacing: 1.8,
+    textTransform: "uppercase",
   },
+  availabilityDot: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  dotInner: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+  },
+  dotInnerAvailable: {
+    backgroundColor: "#2ECC71",
+  },
+  dotInnerUnavailable: {
+    backgroundColor: COLORS.textMuted,
+  },
+  availabilityText: {
+    fontFamily: "PlusJakartaSans-Regular",
+    fontSize: 12,
+  },
+  available: {
+    color: "#2ECC71",
+  },
+  notAvailable: {
+    color: COLORS.textMuted,
+  },
+
+  // ── Room name ──────────────────────────────────────────────────────────────
   roomName: {
     fontFamily: "NotoSerif-Bold",
-    fontSize: 24,
+    fontSize: 26,
     color: COLORS.primary,
-    lineHeight: 32,
-    marginBottom: 12,
+    lineHeight: 34,
+    marginBottom: 14,
+    letterSpacing: -0.3,
   },
-  metaRow: {
+
+  // ── Rating + price ─────────────────────────────────────────────────────────
+  ratingPriceRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 20,
+    marginBottom: 16,
   },
-  metaLeft: {
+
+  // ── Guest capacity ─────────────────────────────────────────────────────────
+  guestRow: {
     flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
   },
   guestPill: {
-    backgroundColor: COLORS.badgeBg,
-    borderRadius: 50,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    justifyContent: "center",
+    flexDirection: "row",
     alignItems: "center",
+    gap: 6,
+    backgroundColor: COLORS.background,
+    borderWidth: 1,
+    borderColor: COLORS.inputBorder,
+    borderRadius: 50,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  guestIcon: {
+    fontSize: 13,
   },
   guestText: {
     fontFamily: "PlusJakartaSans-Regular",
-    fontSize: 12,
-    color: COLORS.badgeText,
+    fontSize: 12.5,
+    color: COLORS.textBody,
   },
-  amenitiesRow: {
+
+  // ── Amenities ──────────────────────────────────────────────────────────────
+  amenitiesGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 8,
-    marginBottom: 6,
   },
-  sectionSpacing: {
-    marginTop: 24,
+  amenityChip: {
+    // slight override — let AmenityChip handle its own internal style
   },
+
+  // ── Description ───────────────────────────────────────────────────────────
   description: {
     fontFamily: "PlusJakartaSans-Regular",
     fontSize: 14,
     color: COLORS.textBody,
-    lineHeight: 22,
+    lineHeight: 23,
   },
   expandBtn: {
     marginTop: 10,
@@ -573,68 +775,140 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: COLORS.secondary,
   },
-  policiesList: {
-    gap: 12,
+
+  // ── Price breakdown spacing ────────────────────────────────────────────────
+  priceBreakdown: {
+    marginTop: 16,
   },
-  policyRow: {
+
+  // ── Reviews ───────────────────────────────────────────────────────────────
+  reviewsHeader: {
     flexDirection: "row",
-    gap: 12,
-    alignItems: "flex-start",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 16,
   },
-  policyIcon: {
-    fontSize: 20,
-    lineHeight: 24,
+  reviewsSection: {
+    // container
   },
-  policyText: {
-    flex: 1,
+  emptyReviews: {
+    alignItems: "center",
+    paddingVertical: 28,
+    backgroundColor: COLORS.background,
+    borderRadius: 12,
   },
-  policyTitle: {
-    fontFamily: "PlusJakartaSans-Bold",
-    fontSize: 14,
+  emptyReviewsTitle: {
+    fontFamily: "NotoSerif-Bold",
+    fontSize: 15,
     color: COLORS.primary,
+    marginBottom: 6,
   },
-  policyDesc: {
+  emptyReviewsSubtitle: {
     fontFamily: "PlusJakartaSans-Regular",
     fontSize: 13,
     color: COLORS.textMuted,
-    lineHeight: 20,
+    textAlign: "center",
+    paddingHorizontal: 20,
   },
+  writeReviewBtn: {
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  cancelReviewBtn: {
+    backgroundColor: "transparent",
+    borderWidth: 1,
+    borderColor: COLORS.inputBorder,
+  },
+  writeReviewBtnText: {
+    fontFamily: "PlusJakartaSans-Bold",
+    fontSize: 11.5,
+    color: COLORS.neutral,
+    letterSpacing: 0.3,
+  },
+  cancelReviewBtnText: {
+    color: COLORS.textBody,
+  },
+  loadingText: {
+    fontFamily: "PlusJakartaSans-Regular",
+    fontSize: 13,
+    color: COLORS.textMuted,
+    textAlign: "center",
+    paddingVertical: 20,
+  },
+  inlineReviewForm: {
+    marginBottom: 20,
+    backgroundColor: COLORS.background,
+    borderRadius: 16,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: COLORS.inputBorder,
+  },
+
+  // ── Policies ──────────────────────────────────────────────────────────────
+  policiesList: {
+    // last item border will show — fine
+  },
+
+  // ── CTA bar ───────────────────────────────────────────────────────────────
   ctaWrapper: {
     position: "absolute",
     left: 0,
     right: 0,
     bottom: 0,
     paddingHorizontal: 20,
-    paddingBottom: 28,
-    paddingTop: 10,
-    backgroundColor: "rgba(245, 243, 239, 0.96)",
+    paddingBottom: 30,
+    paddingTop: 12,
+    backgroundColor: "rgba(255, 255, 255, 0.97)",
+    borderTopWidth: 1,
+    borderTopColor: COLORS.inputBorder,
+    gap: 10,
+  },
+  ctaNightsSummary: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 4,
+  },
+  ctaNightsText: {
+    fontFamily: "PlusJakartaSans-Regular",
+    fontSize: 13,
+    color: COLORS.textMuted,
+  },
+  ctaTotalText: {
+    fontFamily: "NotoSerif-Bold",
+    fontSize: 15,
+    color: COLORS.primary,
+  },
+  ctaBtnWrap: {
+    // wrap for animation
   },
   ctaBtn: {
-    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 12,
     backgroundColor: COLORS.primary,
-    borderRadius: 54,
+    borderRadius: 14,
     paddingVertical: 16,
     shadowColor: COLORS.primary,
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
+    shadowOpacity: 0.25,
+    shadowRadius: 14,
     shadowOffset: { width: 0, height: 4 },
     elevation: 6,
   },
   ctaBtnDisabled: {
-    backgroundColor: "#B1B0AE",
-  },
-  ctaIcon: {
-    fontSize: 18,
+    backgroundColor: "#C8C7C5",
+    shadowOpacity: 0,
+    elevation: 0,
   },
   ctaText: {
-    fontFamily: "PlusJakartaSans-Bold",
+    fontFamily: "NotoSerif-Bold",
     fontSize: 15,
     color: COLORS.neutral,
-    textAlign: "center",
+    letterSpacing: 0.2,
   },
+
+  // ── Empty / loading states ─────────────────────────────────────────────────
   emptyContainer: {
     flex: 1,
     alignItems: "center",
@@ -665,66 +939,6 @@ const styles = StyleSheet.create({
     fontFamily: "PlusJakartaSans-Bold",
     fontSize: 14,
     color: COLORS.neutral,
-  },
-  reviewsSection: {
-    marginTop: 8,
-  },
-  reviewsHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 16,
-  },
-  reviewsCount: {
-    fontFamily: "PlusJakartaSans-Bold",
-    fontSize: 16,
-    color: COLORS.primary,
-  },
-  emptyReviews: {
-    alignItems: "center",
-    paddingVertical: 32,
-  },
-  emptyReviewsTitle: {
-    fontFamily: "PlusJakartaSans-Bold",
-    fontSize: 16,
-    color: COLORS.primary,
-    marginBottom: 8,
-  },
-  emptyReviewsSubtitle: {
-    fontFamily: "PlusJakartaSans-Regular",
-    fontSize: 14,
-    color: COLORS.textMuted,
-    textAlign: "center",
-    marginBottom: 20,
-  },
-  writeReviewBtn: {
-    backgroundColor: COLORS.primary,
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 20,
-  },
-  cancelReviewBtn: {
-    backgroundColor: COLORS.backgroundSoft,
-    borderWidth: 1,
-    borderColor: COLORS.inputBorder,
-  },
-  writeReviewBtnText: {
-    fontFamily: "PlusJakartaSans-Bold",
-    fontSize: 13,
-    color: COLORS.neutral,
-  },
-  loadingText: {
-    fontFamily: "PlusJakartaSans-Regular",
-    fontSize: 14,
-    color: COLORS.textMuted,
-    textAlign: "center",
-    paddingVertical: 20,
-  },
-  inlineReviewForm: {
-    marginBottom: 24,
-    backgroundColor: COLORS.backgroundSoft,
-    borderRadius: 12,
-    overflow: "hidden",
   },
 });
 

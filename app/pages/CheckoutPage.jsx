@@ -19,9 +19,11 @@ import FormField from "../components/FormField";
 import PaymentMethodSelector from "../components/PaymentMethodSelector";
 import useRoomStore from "../store/useRoomStore";
 import { createBooking, createGuestBooking } from "@/services/bookingService";
+import { getRoomDetail } from "@/services/roomService";
 import { extractErrorMessage } from "@/lib/errorUtils";
 import { useAuth } from "@/context/AuthContext";
 import TopBar from "../components/TopBar";
+import { POLICY_ICONS } from "../constants/mockData";
 
 // ─── Design Tokens ────────────────────────────────────────────────────────────
 const COLORS = {
@@ -91,10 +93,12 @@ const CheckoutPage = () => {
     email: "",
     phone: "",
     region: "Philippines",
+    estimatedArrivalTime: "",
   });
   const [errors, setErrors] = useState({});
   const [selectedPayment, setSelectedPayment] = useState("card");
   const [submitting, setSubmitting] = useState(false);
+  const [roomPolicies, setRoomPolicies] = useState([]);
 
   // Entry animation
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -147,6 +151,31 @@ const CheckoutPage = () => {
     }));
   }, [user]);
 
+  useEffect(() => {
+    const roomId = cartItems[0]?.roomId;
+    if (!roomId) {
+      setRoomPolicies([]);
+      return;
+    }
+
+    let isActive = true;
+    const loadRoomPolicies = async () => {
+      try {
+        const room = await getRoomDetail(roomId);
+        if (isActive) {
+          setRoomPolicies(Array.isArray(room.policies) ? room.policies : []);
+        }
+      } catch (_err) {
+        if (isActive) setRoomPolicies([]);
+      }
+    };
+
+    loadRoomPolicies();
+    return () => {
+      isActive = false;
+    };
+  }, [cartItems]);
+
   const handleConfirm = async () => {
     const validationErrors = validate(form);
     if (Object.keys(validationErrors).length > 0) {
@@ -155,7 +184,10 @@ const CheckoutPage = () => {
     }
 
     if (cartItems.length === 0) {
-      Alert.alert("Empty cart", "Add at least one room before checkout.");
+      Alert.alert(
+        "Empty itinerary",
+        "Add at least one room before confirming.",
+      );
       return;
     }
 
@@ -170,13 +202,15 @@ const CheckoutPage = () => {
         payment_method: selectedPayment,
       };
 
+      if (form.estimatedArrivalTime) {
+        bookingParams.estimated_arrival_time = form.estimatedArrivalTime;
+      }
+
       let bookingResponse;
 
       if (user) {
-        // Authenticated user booking
         bookingResponse = await createBooking(bookingParams);
       } else {
-        // Guest booking - include guest details
         const guestDetails = {
           full_name: form.fullName,
           email: form.email,
@@ -191,7 +225,6 @@ const CheckoutPage = () => {
 
       clearCart();
 
-      // Pass booking data to confirmation page
       router.push({
         pathname: "pages/ConfirmationPage",
         params: {
@@ -199,11 +232,12 @@ const CheckoutPage = () => {
         },
       });
     } catch (error) {
-      Alert.alert("Checkout failed", extractErrorMessage(error));
+      Alert.alert("Booking failed", extractErrorMessage(error));
     } finally {
       setSubmitting(false);
     }
   };
+
   return (
     <View style={styles.container}>
       <TopBar />
@@ -233,15 +267,22 @@ const CheckoutPage = () => {
             style={styles.steps}
           />
 
+          {/* ── Page heading ── */}
+          <View style={styles.heading}>
+            <Text style={styles.headingEyebrow}>STEP 2 OF 3</Text>
+            <Text style={styles.headingTitle}>Guest & Payment</Text>
+            <View style={styles.headingAccentBar} />
+          </View>
+
           {/* ── Booking Details ── */}
           <BookingDetailCard booking={bookingDetail} style={styles.section} />
 
           {/* ── Guest Details ── */}
-          <Text style={styles.sectionTitle}>Guest Details</Text>
+          <SectionHeader label="GUEST DETAILS" />
 
           <FormField
             label="FULL NAME"
-            placeholder="John Doe"
+            placeholder="John Dela Cruz"
             value={form.fullName}
             onChangeText={setField("fullName")}
             autoCapitalize="words"
@@ -251,7 +292,7 @@ const CheckoutPage = () => {
 
           <FormField
             label="EMAIL ADDRESS"
-            placeholder="john.doe@luxury.com"
+            placeholder="john@example.com"
             value={form.email}
             onChangeText={setField("email")}
             keyboardType="email-address"
@@ -277,16 +318,57 @@ const CheckoutPage = () => {
             />
           </View>
 
+          <FormField
+            label="ESTIMATED ARRIVAL TIME (24-hr)"
+            placeholder="14:00"
+            value={form.estimatedArrivalTime}
+            onChangeText={setField("estimatedArrivalTime")}
+            keyboardType="numeric"
+            error={errors.estimatedArrivalTime}
+            style={styles.field}
+          />
+
           {/* ── Payment Method ── */}
-          <Text style={[styles.sectionTitle, styles.sectionSpacing]}>
-            Payment Method
-          </Text>
+          <SectionHeader
+            label="PAYMENT METHOD"
+            style={styles.sectionHeaderSpacing}
+          />
           <PaymentMethodSelector
             methods={PAYMENT_METHODS}
             selectedId={selectedPayment}
             onSelect={setSelectedPayment}
             style={styles.section}
           />
+
+          {roomPolicies.length > 0 && (
+            <View style={styles.section}>
+              <SectionHeader label="HOUSE POLICIES" />
+              <View style={styles.policiesCard}>
+                {roomPolicies.map((policy, index) => (
+                  <View
+                    key={policy.id ?? policy.title}
+                    style={[
+                      styles.policyRow,
+                      index < roomPolicies.length - 1 &&
+                        styles.policyRowDivider,
+                    ]}
+                  >
+                    <View style={styles.policyIconWrap}>
+                      <Text style={styles.policyIcon}>
+                        {POLICY_ICONS?.[policy.type] ?? "📋"}
+                      </Text>
+                    </View>
+                    <View style={styles.policyTextWrap}>
+                      <Text style={styles.policyTitle}>{policy.title}</Text>
+                      <Text style={styles.policyDescription}>
+                        {policy.description}
+                      </Text>
+                    </View>
+                  </View>
+                ))}
+              </View>
+            </View>
+          )}
 
           {/* ── Terms ── */}
           <TermsText style={styles.terms} />
@@ -300,9 +382,36 @@ const CheckoutPage = () => {
   );
 };
 
-// ─── Sub-components (local — not worth separate files) ────────────────────────
+// ─── Section Header ───────────────────────────────────────────────────────────
+const SectionHeader = ({ label, style }) => (
+  <View style={[sectionHeaderStyles.row, style]}>
+    <View style={sectionHeaderStyles.line} />
+    <Text style={sectionHeaderStyles.text}>{label}</Text>
+    <View style={sectionHeaderStyles.line} />
+  </View>
+);
 
-/** Region picker — simple dropdown placeholder */
+const sectionHeaderStyles = StyleSheet.create({
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginBottom: 16,
+  },
+  line: {
+    flex: 1,
+    height: 1,
+    backgroundColor: COLORS.inputBorder,
+  },
+  text: {
+    fontFamily: "PlusJakartaSans-Bold",
+    fontSize: 9.5,
+    letterSpacing: 2,
+    color: COLORS.textMuted,
+  },
+});
+
+// ─── Region Picker ────────────────────────────────────────────────────────────
 const RegionPicker = ({ value, onChange, style }) => (
   <View style={[style]}>
     <Text style={pickerStyles.label}>REGION</Text>
@@ -344,12 +453,10 @@ const pickerStyles = StyleSheet.create({
   },
 });
 
-/** Terms & conditions text with gold links */
+// ─── Terms ────────────────────────────────────────────────────────────────────
 const TermsText = ({ style }) => (
   <View style={[termsStyles.container, style]}>
-    <Text style={termsStyles.text}>
-      By clicking &quot;Confirm Booking&quot;, you agree to our{" "}
-    </Text>
+    <Text style={termsStyles.text}>By proceeding you agree to our </Text>
     <TouchableOpacity activeOpacity={0.7}>
       <Text style={termsStyles.link}>Terms of Service</Text>
     </TouchableOpacity>
@@ -382,7 +489,7 @@ const termsStyles = StyleSheet.create({
   },
 });
 
-/** Sticky confirm CTA */
+// ─── Confirm Button ───────────────────────────────────────────────────────────
 const ConfirmButton = ({ onPress, loading }) => {
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
@@ -403,6 +510,8 @@ const ConfirmButton = ({ onPress, loading }) => {
 
   return (
     <View style={confirmStyles.wrapper}>
+      {/* Subtle top fade */}
+      <View style={confirmStyles.fadeEdge} pointerEvents="none" />
       <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
         <TouchableOpacity
           style={[confirmStyles.btn, loading && confirmStyles.btnLoading]}
@@ -410,10 +519,16 @@ const ConfirmButton = ({ onPress, loading }) => {
           activeOpacity={0.88}
           disabled={loading}
         >
-          <Text style={confirmStyles.text}>
-            {loading ? "Processing..." : "Confirm Booking"}
-          </Text>
-          {!loading && <Text style={confirmStyles.lock}> 🔒</Text>}
+          {loading ? (
+            <Text style={confirmStyles.text}>Processing reservation…</Text>
+          ) : (
+            <>
+              <Text style={confirmStyles.text}>Confirm Booking</Text>
+              <View style={confirmStyles.lockBadge}>
+                <Text style={confirmStyles.lockIcon}>🔒</Text>
+              </View>
+            </>
+          )}
         </TouchableOpacity>
       </Animated.View>
     </View>
@@ -426,12 +541,19 @@ const confirmStyles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: "rgba(245,243,239,0.97)",
+    backgroundColor: COLORS.background,
     paddingHorizontal: 20,
-    paddingTop: 12,
+    paddingTop: 14,
     paddingBottom: 36,
     borderTopWidth: 1,
     borderTopColor: COLORS.inputBorder,
+  },
+  fadeEdge: {
+    position: "absolute",
+    top: -20,
+    left: 0,
+    right: 0,
+    height: 20,
   },
   btn: {
     backgroundColor: COLORS.primary,
@@ -440,6 +562,7 @@ const confirmStyles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
+    gap: 10,
     shadowColor: COLORS.primary,
     shadowOpacity: 0.3,
     shadowRadius: 12,
@@ -455,8 +578,16 @@ const confirmStyles = StyleSheet.create({
     color: COLORS.neutral,
     letterSpacing: 0.2,
   },
-  lock: {
-    fontSize: 15,
+  lockBadge: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: "rgba(255,255,255,0.12)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  lockIcon: {
+    fontSize: 13,
   },
 });
 
@@ -469,50 +600,6 @@ const styles = StyleSheet.create({
   flex: {
     flex: 1,
   },
-
-  // Navbar
-  navbar: {
-    backgroundColor: COLORS.navBg,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 18,
-    paddingTop: 52,
-    paddingBottom: 14,
-  },
-  backBtn: {
-    width: 36,
-    height: 36,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  backArrow: {
-    fontFamily: "NotoSerif-Bold",
-    fontSize: 20,
-    color: COLORS.secondary,
-    lineHeight: 24,
-  },
-  navBrand: {
-    fontFamily: "NotoSerif-Bold",
-    fontSize: 20,
-    color: COLORS.secondary,
-    letterSpacing: 0.5,
-  },
-  avatarPlaceholder: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: COLORS.secondary,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  avatarInitial: {
-    fontFamily: "PlusJakartaSans-Bold",
-    fontSize: 15,
-    color: COLORS.primary,
-  },
-
-  // Scroll
   scroll: {
     flex: 1,
   },
@@ -521,26 +608,94 @@ const styles = StyleSheet.create({
     paddingTop: 24,
   },
 
-  // Steps
+  // ── Step indicator ──
   steps: {
-    marginBottom: 24,
+    marginBottom: 28,
   },
 
-  // Sections
-  section: {
-    marginBottom: 24,
+  // ── Heading ──
+  heading: {
+    marginBottom: 28,
   },
-  sectionTitle: {
+  headingEyebrow: {
+    fontFamily: "PlusJakartaSans-Bold",
+    fontSize: 10,
+    letterSpacing: 2.5,
+    color: COLORS.secondary,
+    marginBottom: 6,
+  },
+  headingTitle: {
     fontFamily: "NotoSerif-Bold",
-    fontSize: 18,
+    fontSize: 28,
     color: COLORS.primary,
-    marginBottom: 16,
+    letterSpacing: 0.2,
+    lineHeight: 34,
   },
-  sectionSpacing: {
+  headingAccentBar: {
+    marginTop: 12,
+    width: 36,
+    height: 2,
+    backgroundColor: COLORS.secondary,
+    borderRadius: 2,
+  },
+
+  // ── Section ──
+  section: {
+    marginBottom: 28,
+  },
+  sectionHeaderSpacing: {
     marginTop: 8,
   },
 
-  // Form fields
+  policiesCard: {
+    borderWidth: 1,
+    borderColor: COLORS.inputBorder,
+    borderRadius: 16,
+    backgroundColor: COLORS.neutral,
+    overflow: "hidden",
+  },
+  policyRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+  },
+  policyRowDivider: {
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.inputBorder,
+  },
+  policyIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: COLORS.background,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 1,
+    flexShrink: 0,
+  },
+  policyIcon: {
+    fontSize: 16,
+    lineHeight: 20,
+  },
+  policyTextWrap: {
+    flex: 1,
+  },
+  policyTitle: {
+    fontFamily: "PlusJakartaSans-Bold",
+    fontSize: 13,
+    color: COLORS.primary,
+    marginBottom: 3,
+  },
+  policyDescription: {
+    fontFamily: "PlusJakartaSans-Regular",
+    fontSize: 12.5,
+    color: COLORS.textMuted,
+    lineHeight: 19,
+  },
+
+  // ── Form ──
   field: {
     marginBottom: 16,
   },
@@ -556,7 +711,7 @@ const styles = StyleSheet.create({
     width: 130,
   },
 
-  // Terms
+  // ── Terms ──
   terms: {
     marginTop: 8,
     marginBottom: 16,

@@ -3,7 +3,7 @@
 // Unified navigation tabs for BottomNavBar
 export const NAV_TABS = [
   { id: "home", icon: "🏠", label: "HOME" },
-  { id: "cart", icon: "🛒", label: "CART" },
+  { id: "cart", icon: "🛒", label: "RESERVATION" },
   { id: "bookings", icon: "📋", label: "BOOKINGS" },
   { id: "wishlist", icon: "❤️", label: "WISHLIST" },
 ];

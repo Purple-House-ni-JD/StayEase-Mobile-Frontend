@@ -7,16 +7,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-
-const COLORS = {
-  primary: "#0A1D37",
-  secondary: "#C5A059",
-  neutral: "#FFFFFF",
-  background: "#F5F3EF",
-  inputBorder: "#E0DDD8",
-  textMuted: "#9A9690",
-  textBody: "#3A3530",
-};
+import { COLORS } from "../constants/colors";
 
 /**
  * BookingDetailCard
@@ -194,7 +185,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   thumbnailPlaceholder: {
-    backgroundColor: "#2B4A6F",
+    backgroundColor: COLORS.backgroundSoft,
   },
   roomInfo: {
     flex: 1,

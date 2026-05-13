@@ -72,6 +72,16 @@ const formatDate = (iso) => {
       });
 };
 
+/** Format "HH:MM:SS" → "2:00 PM" */
+const formatTime = (timeString) => {
+  if (!timeString) return "—";
+  const [hours, minutes] = timeString.split(":");
+  const hour = parseInt(hours, 10);
+  const ampm = hour >= 12 ? "PM" : "AM";
+  const displayHour = hour % 12 || 12;
+  return `${displayHour}:${minutes} ${ampm}`;
+};
+
 /** Format "YYYY-MM-DD" → "Mon, May 10" */
 const formatShortDate = (iso) => {
   if (!iso) return "—";
@@ -340,11 +350,32 @@ const BookingDetailPage = () => {
               label="Check-in"
               value={formatDate(booking.check_in)}
             />
+            {booking.checkin_time && (
+              <BookingInfoRow
+                icon="🕑"
+                label="Check-in Time"
+                value={formatTime(booking.checkin_time)}
+              />
+            )}
             <BookingInfoRow
               icon="📅"
               label="Check-out"
               value={formatDate(booking.check_out)}
             />
+            {booking.checkout_time && (
+              <BookingInfoRow
+                icon="🕑"
+                label="Check-out Time"
+                value={formatTime(booking.checkout_time)}
+              />
+            )}
+            {booking.estimated_arrival_time && (
+              <BookingInfoRow
+                icon="🚗"
+                label="Estimated Arrival"
+                value={formatTime(booking.estimated_arrival_time)}
+              />
+            )}
             <BookingInfoRow
               icon="🌙"
               label="Nights"

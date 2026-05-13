@@ -104,12 +104,12 @@ export const MOCK_ROOM = {
 
 // Policy Icons
 export const POLICY_ICONS = {
-  CHECK_IN: "🕑",
-  CHECK_OUT: "🕛",
-  CANCELLATION: "📋",
-  SMOKING: "🚭",
-  PET: "🐾",
-  PAYMENT: "💳",
+  check_in: "🕑",
+  check_out: "🕛",
+  cancellation: "📋",
+  smoking: "🚭",
+  pet: "🐾",
+  payment: "💳",
   GENERAL: "ℹ️",
 };
 
