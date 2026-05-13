@@ -40,7 +40,7 @@ import AuthRequiredPrompt from "../components/AuthRequiredPrompt";
 const mapBooking = (booking) => {
   const statusMap = {
     pending: "pending",
-    confirmed: "active",
+    confirmed: "confirmed",
     completed: "completed", // completed stays get their own status
     cancelled: "cancelled",
   };

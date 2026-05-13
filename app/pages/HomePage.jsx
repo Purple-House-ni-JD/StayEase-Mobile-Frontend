@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useMemo } from "react";
+import { useCallback, useEffect, useRef, useMemo, useState } from "react";
 import {
   Animated,
   Dimensions,
@@ -21,9 +21,22 @@ import { COLORS, FONTS } from "../constants/colors";
 import { NAV_TABS, navigateToTab } from "../constants/navigation";
 import useRoomStore from "../store/useRoomStore";
 import { useAuth } from "@/context/AuthContext";
+import { getRoomBookedDates } from "../../src/services/roomService";
 
 const { width } = Dimensions.get("window");
 const CARD_WIDTH = (width - 52 - 12) / 2;
+
+/**
+ * Returns today's date as a YYYY-MM-DD string in local time,
+ * matching the ISO strings returned by getRoomBookedDates.
+ */
+const getTodayString = () => {
+  const now = new Date();
+  const yyyy = now.getFullYear();
+  const mm = String(now.getMonth() + 1).padStart(2, "0");
+  const dd = String(now.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+};
 
 const HomePage = () => {
   const router = useRouter();
@@ -31,6 +44,7 @@ const HomePage = () => {
   const rooms = useRoomStore((state) => state.rooms);
   const searchQuery = useRoomStore((state) => state.searchQuery);
   const activeCategory = useRoomStore((state) => state.activeCategory);
+  const availabilityFilter = useRoomStore((state) => state.availabilityFilter);
   const featuredProperty = useRoomStore((state) => state.featuredProperty);
   const isRoomsLoading = useRoomStore((state) => state.isRoomsLoading);
   const hydrateRooms = useRoomStore((state) => state.hydrateRooms);
@@ -38,6 +52,17 @@ const HomePage = () => {
   const setActiveTab = useRoomStore((state) => state.setActiveTab);
   const setActiveCategory = useRoomStore((state) => state.setActiveCategory);
   const setSearchQuery = useRoomStore((state) => state.setSearchQuery);
+  const setAvailabilityFilter = useRoomStore(
+    (state) => state.setAvailabilityFilter,
+  );
+
+  /**
+   * bookedTodayIds – set of room IDs that have at least one booking
+   * covering today's date (status pending or confirmed).
+   * Populated in the background after rooms load; until then it's null
+   * so we don't hide rooms while still fetching.
+   */
+  const [bookedTodayIds, setBookedTodayIds] = useState(null);
 
   const headerFade = useRef(new Animated.Value(0)).current;
   const greetingSlide = useRef(new Animated.Value(30)).current;
@@ -82,6 +107,39 @@ const HomePage = () => {
     hydrateRooms().catch(() => {});
   }, [hydrateRooms]);
 
+  /**
+   * After rooms load, fetch booked dates for each room in parallel and
+   * build the set of room IDs that are booked today.
+   */
+  useEffect(() => {
+    if (!rooms || rooms.length === 0) return;
+
+    const today = getTodayString();
+
+    Promise.allSettled(
+      rooms.map((room) =>
+        getRoomBookedDates(room.id).then((dates) => ({
+          id: room.id,
+          // getRoomBookedDates returns Date objects; convert back to YYYY-MM-DD
+          bookedToday: dates.some((d) => {
+            const yyyy = d.getFullYear();
+            const mm = String(d.getMonth() + 1).padStart(2, "0");
+            const dd = String(d.getDate()).padStart(2, "0");
+            return `${yyyy}-${mm}-${dd}` === today;
+          }),
+        })),
+      ),
+    ).then((results) => {
+      const ids = new Set();
+      results.forEach((res) => {
+        if (res.status === "fulfilled" && res.value.bookedToday) {
+          ids.add(res.value.id);
+        }
+      });
+      setBookedTodayIds(ids);
+    });
+  }, [rooms]);
+
   const roomCategories = useMemo(() => {
     const categories = Array.from(new Set(rooms.map((room) => room.category)));
     return ["ALL", ...categories];
@@ -98,9 +156,18 @@ const HomePage = () => {
         query.length === 0 ||
         room.name.toLowerCase().includes(query) ||
         room.category.toLowerCase().includes(query);
-      return matchesCategory && matchesSearch;
+
+      // Availability is based on whether the room has an active booking today.
+      // While booked-date data is still loading (bookedTodayIds === null),
+      // treat every room as passing the filter so nothing disappears mid-load.
+      const matchesAvailability =
+        availabilityFilter === "all" ||
+        bookedTodayIds === null ||
+        (availabilityFilter === "available" && !bookedTodayIds.has(room.id));
+
+      return matchesCategory && matchesSearch && matchesAvailability;
     });
-  }, [rooms, searchQuery, activeCategory]);
+  }, [rooms, searchQuery, activeCategory, availabilityFilter, bookedTodayIds]);
 
   const handleTabSelect = (id) => {
     setActiveTab(id);
@@ -194,13 +261,54 @@ const HomePage = () => {
           </View>
         ) : null}
 
-        {/* ── Section Header ── */}
+        {/* ── Section Header + Availability Toggle ── */}
         <View style={styles.sectionHeader}>
+          {/* Left: dot + title + count */}
           <View style={styles.sectionTitleGroup}>
             <View style={styles.sectionTitleDot} />
-            <Text style={styles.sectionTitle}>Available Rooms</Text>
+            <Text style={styles.sectionTitle}>Rooms</Text>
+            <Text style={styles.roomCount}>{filteredRooms.length}</Text>
           </View>
-          <Text style={styles.roomCount}>{filteredRooms.length} rooms</Text>
+
+          {/* Right: compact pill toggle */}
+          <View style={styles.pillToggle}>
+            <TouchableOpacity
+              style={[
+                styles.pillOption,
+                availabilityFilter === "all" && styles.pillOptionActive,
+              ]}
+              onPress={() => setAvailabilityFilter("all")}
+              activeOpacity={0.75}
+            >
+              <Text
+                style={[
+                  styles.pillOptionText,
+                  availabilityFilter === "all" && styles.pillOptionTextActive,
+                ]}
+              >
+                All
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.pillOption,
+                availabilityFilter === "available" && styles.pillOptionActive,
+              ]}
+              onPress={() => setAvailabilityFilter("available")}
+              activeOpacity={0.75}
+            >
+              <Text
+                style={[
+                  styles.pillOptionText,
+                  availabilityFilter === "available" &&
+                    styles.pillOptionTextActive,
+                ]}
+              >
+                Available
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </Animated.View>
     ),
@@ -215,6 +323,8 @@ const HomePage = () => {
       roomCategories,
       activeCategory,
       setActiveCategory,
+      availabilityFilter,
+      setAvailabilityFilter,
       featuredProperty,
       rooms,
       router,
@@ -399,6 +509,33 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: COLORS.textMuted,
     letterSpacing: 1.2,
+    marginTop: 2,
+  },
+
+  // ── Availability Pill Toggle ──────────────────────────────────
+  pillToggle: {
+    flexDirection: "row",
+    backgroundColor: COLORS.inputBorder,
+    borderRadius: 20,
+    padding: 3,
+    gap: 2,
+  },
+  pillOption: {
+    paddingVertical: 5,
+    paddingHorizontal: 12,
+    borderRadius: 17,
+  },
+  pillOptionActive: {
+    backgroundColor: COLORS.primary,
+  },
+  pillOptionText: {
+    fontFamily: FONTS.label,
+    fontSize: 11,
+    color: COLORS.textMuted,
+    letterSpacing: 0.4,
+  },
+  pillOptionTextActive: {
+    color: COLORS.neutral,
   },
 
   // ── Grid ──────────────────────────────────

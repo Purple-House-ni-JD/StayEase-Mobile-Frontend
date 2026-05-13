@@ -69,7 +69,10 @@ export const getBookingDetail = async (id) => {
   return response.data;
 };
 
-export const cancelBooking = async (id) => {
-  const response = await apiClient.post(`/bookings/${id}/cancel/`);
+export const cancelBooking = async (id, reason, notes) => {
+  const response = await apiClient.post(`/bookings/${id}/cancel/`, {
+    reason,
+    notes: notes || "",
+  });
   return response.data;
 };

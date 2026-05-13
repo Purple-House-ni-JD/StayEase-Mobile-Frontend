@@ -52,15 +52,16 @@ const calcSubtotal = (items) =>
 // ─── Empty State ──────────────────────────────────────────────────────────────
 const EmptyItinerary = () => (
   <View style={styles.emptyContainer}>
-    {/* Decorative key icon in a circle */}
     <View style={styles.emptyIconWrap}>
-      <Text style={styles.emptyIcon}>🗝</Text>
+      <Text style={styles.emptyIcon}>🏨</Text>
     </View>
-    <Text style={styles.emptyTitle}>No Reservations Yet</Text>
+
+    <Text style={styles.emptyTitle}>No Rooms Selected</Text>
+
     <Text style={styles.emptySubtitle}>
-      Discover our curated rooms and{"\n"}build your perfect stay.
+      Start exploring available rooms and build your next relaxing getaway.
     </Text>
-    {/* Decorative dashes */}
+
     <View style={styles.emptyDashes}>
       <View style={[styles.dash, styles.dashShort]} />
       <View style={[styles.dash, styles.dashLong]} />
@@ -169,11 +170,11 @@ const BookingCartPage = () => {
           {/* Eyebrow label */}
           <Text style={styles.headingEyebrow}>
             {isEmpty
-              ? "YOUR ITINERARY"
-              : `YOUR ITINERARY · ${cartItems.length} ${cartItems.length === 1 ? "ROOM" : "ROOMS"}`}
+              ? "YOUR ROOMS"
+              : `YOUR ROOMS · ${cartItems.length} ${cartItems.length === 1 ? "ROOM" : "ROOMS"}`}
           </Text>
           <Text style={styles.headingTitle}>
-            {isEmpty ? "Nothing Reserved" : "Pending Reservations"}
+            {isEmpty ? "Your Stay Awaits" : "Review Your Stay"}
           </Text>
           {/* Gold accent bar */}
           <View style={styles.headingAccentBar} />
@@ -192,11 +193,11 @@ const BookingCartPage = () => {
             </View>
 
             {/* ── Promo Code ── */}
-            <PromoCodeInput
+            {/* <PromoCodeInput
               onApply={handlePromoApply}
               onRemove={handlePromoRemove}
               style={styles.promoSection}
-            />
+            /> */}
 
             {/* ── Reservation Summary ── */}
             <SectionLabel>RESERVATION SUMMARY</SectionLabel>
@@ -248,7 +249,7 @@ const BookingCartPage = () => {
       <View style={styles.footer}>
         <CartSummaryFooter
           total={isEmpty ? 0 : total}
-          label={isEmpty ? "Browse Rooms" : "Confirm Reservation"}
+          label={isEmpty ? "Explore Rooms" : "Proceed to Checkout"}
           onPress={handleCheckout}
           disabled={isEmpty}
         />

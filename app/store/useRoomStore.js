@@ -7,12 +7,14 @@ const useRoomStore = create((set, get) => ({
   searchQuery: "",
   activeCategory: "ALL",
   activeTab: "home",
+  availabilityFilter: "all",
   cart: [],
   isRoomsLoading: false,
 
   setSearchQuery: (query) => set({ searchQuery: query }),
   setActiveCategory: (category) => set({ activeCategory: category }),
   setActiveTab: (tab) => set({ activeTab: tab }),
+  setAvailabilityFilter: (filter) => set({ availabilityFilter: filter }),
 
   hydrateRooms: async () => {
     set({ isRoomsLoading: true });
@@ -37,6 +39,7 @@ const useRoomStore = create((set, get) => ({
           rating: Number(room.rating || 0),
           image: room.image_urls?.[0] ? { uri: room.image_urls[0] } : null,
           imageUrls: room.image_urls || [],
+          availability_status: room.availability_status ?? true,
         })),
         featuredProperty:
           featured?.[0] != null

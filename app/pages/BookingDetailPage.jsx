@@ -1,22 +1,3 @@
-/**
- * BookingDetailPage
- *
- * Displays the full detail of a single booking.
- * Route: pages/BookingDetailPage?id=<bookingId>
- *
- * API response shape (BookingDetailSerializer):
- * {
- *   id, booking_ref, check_in, check_out, nights, guest_count,
- *   total_price, status, is_featured, created_at,
- *   payment_status, payment_method,
- *   booking_rooms: [{
- *     id, price_snapshot,
- *     room: { id, name, category, category_display, price_per_night,
- *             max_guest, rating, image_urls }
- *   }]
- * }
- */
-
 import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -41,6 +22,7 @@ import BookingRoomCard from "../components/BookingRoomCard";
 import BookingInfoRow from "../components/BookingInfoRow";
 import SectionCard from "../components/SectionCard";
 import PaymentMethodBadge from "../components/PaymentMethodBadge";
+import CancellationModal from "../components/CancellationModal";
 import { Ionicons } from "@expo/vector-icons";
 
 // ─── Design Tokens ────────────────────────────────────────────────────────────
@@ -55,6 +37,9 @@ const COLORS = {
   danger: "#C0392B",
   dangerBg: "#FDF0EF",
   dangerBorder: "#F5C6C2",
+  info: "#1565C0",
+  infoBg: "#E3F2FD",
+  infoBorder: "#BBDEFB",
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -69,6 +54,22 @@ const formatDate = (iso) => {
         month: "long",
         day: "numeric",
         year: "numeric",
+      });
+};
+
+/** Format datetime string → "May 10, 2026 at 2:30 PM" */
+const formatDateTime = (iso) => {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  return isNaN(d.getTime())
+    ? iso
+    : d.toLocaleString("en-US", {
+        month: "long",
+        day: "numeric",
+        year: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
       });
 };
 
@@ -110,7 +111,7 @@ const PAYMENT_STATUS_COLOR = {
 };
 
 /** Statuses that allow guest self-cancellation */
-const CANCELLABLE_STATUSES = ["pending", "confirmed"];
+const CANCELLABLE_STATUSES = ["pending"];
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
@@ -124,20 +125,17 @@ const HeaderBar = ({ onBack }) => (
       <Ionicons name="arrow-back" size={24} color="black" />
     </TouchableOpacity>
     <Text style={styles.headerTitle}>Booking Detail</Text>
-    {/* Spacer keeps title centred */}
     <View style={styles.backBtn} />
   </View>
 );
 
 const HeroDateStrip = ({ checkIn, checkOut, nights }) => (
   <View style={styles.heroStrip}>
-    {/* Check-in */}
     <View style={styles.heroDateBlock}>
       <Text style={styles.heroDateLabel}>CHECK-IN</Text>
       <Text style={styles.heroDateValue}>{formatShortDate(checkIn)}</Text>
     </View>
 
-    {/* Nights pill */}
     <View style={styles.heroNightsPill}>
       <Text style={styles.heroNightsNum}>{nights}</Text>
       <Text style={styles.heroNightsLabel}>
@@ -145,7 +143,6 @@ const HeroDateStrip = ({ checkIn, checkOut, nights }) => (
       </Text>
     </View>
 
-    {/* Check-out */}
     <View style={[styles.heroDateBlock, styles.heroDateRight]}>
       <Text style={styles.heroDateLabel}>CHECK-OUT</Text>
       <Text style={styles.heroDateValue}>{formatShortDate(checkOut)}</Text>
@@ -208,6 +205,7 @@ const BookingDetailPage = () => {
   const [booking, setBooking] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isCancelling, setIsCancelling] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
   const [error, setError] = useState(null);
 
   // Entry animation
@@ -256,30 +254,27 @@ const BookingDetailPage = () => {
 
   // ── Cancel handler ─────────────────────────────────────────────────────────
   const handleCancel = () => {
-    Alert.alert(
-      "Cancel Booking",
-      `Are you sure you want to cancel booking ${booking?.booking_ref}? This action cannot be undone.`,
-      [
-        { text: "Keep Booking", style: "cancel" },
-        {
-          text: "Cancel Booking",
-          style: "destructive",
-          onPress: confirmCancel,
-        },
-      ],
-    );
+    setShowCancelModal(true);
   };
 
-  const confirmCancel = async () => {
+  const confirmCancel = async (reason, notes) => {
     try {
       setIsCancelling(true);
-      await cancelBooking(id);
+      await cancelBooking(id, reason, notes);
       // Optimistically update local state so the UI reflects the change
-      setBooking((prev) => ({ ...prev, status: "cancelled" }));
+      setBooking((prev) => ({
+        ...prev,
+        status: "cancelled",
+        cancelled_at: new Date().toISOString(),
+        cancellation_reason: reason,
+        cancellation_notes: notes,
+        cancellation_reason_display: getCancellationReasonDisplay(reason),
+      }));
       Alert.alert(
         "Booking Cancelled",
         `Booking ${booking?.booking_ref} has been cancelled.`,
       );
+      setShowCancelModal(false);
     } catch (err) {
       Alert.alert("Could not cancel", extractErrorMessage(err));
     } finally {
@@ -287,9 +282,23 @@ const BookingDetailPage = () => {
     }
   };
 
+  const getCancellationReasonDisplay = (reasonValue) => {
+    const reasons = {
+      change_of_plans: "Change of Plans",
+      found_better_deal: "Found Better Deal",
+      booking_error: "Booking Error",
+      travel_restrictions: "Travel Restrictions",
+      emergency: "Emergency",
+      weather_issues: "Weather Issues",
+      other: "Other",
+    };
+    return reasons[reasonValue] || reasonValue;
+  };
+
   // ── Render ─────────────────────────────────────────────────────────────────
   const isCancellable =
     booking && CANCELLABLE_STATUSES.includes(booking.status);
+  const isCancelled = booking && booking.status === "cancelled";
 
   return (
     <View style={styles.container}>
@@ -301,7 +310,6 @@ const BookingDetailPage = () => {
 
       <HeaderBar onBack={() => router.back()} />
 
-      {/* ── Content ── */}
       {isLoading ? (
         <LoadingView />
       ) : error ? (
@@ -315,7 +323,7 @@ const BookingDetailPage = () => {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}
         >
-          {/* ── Reference + Status ── */}
+          {/* Reference + Status */}
           <View style={styles.refRow}>
             <View>
               <Text style={styles.refLabel}>Booking Reference</Text>
@@ -324,14 +332,14 @@ const BookingDetailPage = () => {
             <BookingStatusBadge status={booking.status} />
           </View>
 
-          {/* ── Date strip ── */}
+          {/* Date strip */}
           <HeroDateStrip
             checkIn={booking.check_in}
             checkOut={booking.check_out}
             nights={booking.nights}
           />
 
-          {/* ── Rooms ── */}
+          {/* Rooms */}
           <SectionCard title="Room(s)">
             {(booking.booking_rooms ?? []).map((br) => (
               <BookingRoomCard
@@ -343,7 +351,7 @@ const BookingDetailPage = () => {
             ))}
           </SectionCard>
 
-          {/* ── Stay Details ── */}
+          {/* Stay Details */}
           <SectionCard title="Stay Details">
             <BookingInfoRow
               icon="📅"
@@ -394,7 +402,7 @@ const BookingDetailPage = () => {
             />
           </SectionCard>
 
-          {/* ── Payment ── */}
+          {/* Payment */}
           <SectionCard title="Payment">
             <BookingInfoRow
               icon="💰"
@@ -421,7 +429,48 @@ const BookingDetailPage = () => {
             <TotalPriceRow total={booking.total_price} />
           </SectionCard>
 
-          {/* ── Cancel button — only shown for cancellable statuses ── */}
+          {/* Cancellation Details - Only shown for cancelled bookings */}
+          {isCancelled && (
+            <SectionCard title="Cancellation Details">
+              {booking.cancelled_at && (
+                <BookingInfoRow
+                  icon="⏰"
+                  label="Cancelled On"
+                  value={formatDateTime(booking.cancelled_at)}
+                />
+              )}
+              {booking.cancellation_reason_display && (
+                <BookingInfoRow
+                  icon="❓"
+                  label="Reason"
+                  value={booking.cancellation_reason_display}
+                />
+              )}
+              {booking.cancellation_notes &&
+                booking.cancellation_notes.trim() !== "" && (
+                  <View style={styles.cancellationNotesWrapper}>
+                    <View style={styles.cancellationNotesHeader}>
+                      <Text style={styles.cancellationNotesIcon}>📝</Text>
+                      <Text style={styles.cancellationNotesLabel}>
+                        Additional Notes
+                      </Text>
+                    </View>
+                    <Text style={styles.cancellationNotesValue}>
+                      {booking.cancellation_notes}
+                    </Text>
+                  </View>
+                )}
+              {!booking.cancellation_reason && !booking.cancellation_notes && (
+                <View style={styles.noCancellationDetails}>
+                  <Text style={styles.noCancellationDetailsText}>
+                    No additional cancellation details available.
+                  </Text>
+                </View>
+              )}
+            </SectionCard>
+          )}
+
+          {/* Cancel button - only shown for cancellable statuses */}
           {isCancellable && (
             <View style={styles.cancelSection}>
               {isCancelling ? (
@@ -430,8 +479,22 @@ const BookingDetailPage = () => {
                 <CancelButton onPress={handleCancel} />
               )}
               <Text style={styles.cancelHint}>
-                Cancellations may be subject to the room&rsquo;s cancellation
-                policy.
+                Cancellations may be subject to the room&apos;s cancellation policy.
+              </Text>
+            </View>
+          )}
+
+          {/* Non-cancellable status message */}
+          {booking && !isCancellable && !isCancelled && (
+            <View style={styles.nonCancellableSection}>
+              <Ionicons
+                name="information-circle"
+                size={24}
+                color={COLORS.textMuted}
+              />
+              <Text style={styles.nonCancellableText}>
+                This booking cannot be cancelled as it is already{" "}
+                {booking.status}.
               </Text>
             </View>
           )}
@@ -439,6 +502,15 @@ const BookingDetailPage = () => {
           <View style={{ height: 40 }} />
         </Animated.ScrollView>
       )}
+
+      {/* Cancellation Modal */}
+      <CancellationModal
+        visible={showCancelModal}
+        onClose={() => setShowCancelModal(false)}
+        onConfirm={confirmCancel}
+        bookingRef={booking?.booking_ref}
+        isLoading={isCancelling}
+      />
     </View>
   );
 };
@@ -450,7 +522,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
   },
 
-  // ── Header bar ──
+  // Header bar
   headerBar: {
     flexDirection: "row",
     alignItems: "center",
@@ -466,10 +538,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  backIcon: {
-    fontSize: 22,
-    color: COLORS.primary,
-  },
   headerTitle: {
     fontFamily: "NotoSerif-Bold",
     fontSize: 17,
@@ -477,7 +545,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.2,
   },
 
-  // ── Scroll ──
+  // Scroll
   scroll: {
     flex: 1,
   },
@@ -486,7 +554,7 @@ const styles = StyleSheet.create({
     paddingTop: 8,
   },
 
-  // ── Reference row ──
+  // Reference row
   refRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -508,7 +576,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
   },
 
-  // ── Hero date strip ──
+  // Hero date strip
   heroStrip: {
     flexDirection: "row",
     backgroundColor: COLORS.primary,
@@ -557,17 +625,17 @@ const styles = StyleSheet.create({
     color: COLORS.primary,
   },
 
-  // ── Section / room card ──
+  // Section / room card
   roomCardSpacing: {
     marginVertical: 8,
   },
 
-  // ── Info row overrides ──
+  // Info row overrides
   lastRow: {
     borderBottomWidth: 0,
   },
 
-  // ── Payment section ──
+  // Payment section
   paymentMethodRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -587,7 +655,7 @@ const styles = StyleSheet.create({
     color: COLORS.primary,
   },
 
-  // ── Total row ──
+  // Total row
   totalRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -605,7 +673,45 @@ const styles = StyleSheet.create({
     color: COLORS.secondary,
   },
 
-  // ── Cancel section ──
+  // Cancellation Notes
+  cancellationNotesWrapper: {
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.inputBorder,
+  },
+  cancellationNotesHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  cancellationNotesIcon: {
+    fontSize: 16,
+    marginRight: 8,
+  },
+  cancellationNotesLabel: {
+    fontFamily: "PlusJakartaSans-Bold",
+    fontSize: 13,
+    color: COLORS.primary,
+  },
+  cancellationNotesValue: {
+    fontFamily: "PlusJakartaSans-Regular",
+    fontSize: 13.5,
+    color: COLORS.textBody,
+    lineHeight: 20,
+    paddingLeft: 24,
+  },
+  noCancellationDetails: {
+    paddingVertical: 16,
+    alignItems: "center",
+  },
+  noCancellationDetailsText: {
+    fontFamily: "PlusJakartaSans-Regular",
+    fontSize: 13,
+    color: COLORS.textMuted,
+    fontStyle: "italic",
+  },
+
+  // Cancel section
   cancelSection: {
     marginTop: 4,
     marginBottom: 8,
@@ -635,7 +741,29 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
 
-  // ── Loading / Error ──
+  // Non-cancellable section
+  nonCancellableSection: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    marginTop: 20,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    backgroundColor: COLORS.infoBg,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: COLORS.infoBorder,
+  },
+  nonCancellableText: {
+    fontFamily: "PlusJakartaSans-Regular",
+    fontSize: 13,
+    color: COLORS.info,
+    flex: 1,
+    textAlign: "center",
+  },
+
+  // Loading / Error
   centered: {
     flex: 1,
     alignItems: "center",

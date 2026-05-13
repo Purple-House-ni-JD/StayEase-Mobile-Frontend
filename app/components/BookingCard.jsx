@@ -9,12 +9,13 @@ const COLORS = {
   textMuted: "#9A9690",
   textBody: "#3A3530",
   inputBorder: "#E0DDD8",
+  green: "#4CAF50",
 };
 
 // ── Status config ──────────────────────────────────────────────────────────────
 const STATUS_CONFIG = {
-  active: {
-    label: "ACTIVE",
+  confirmed: {
+    label: "CONFIRMED",
     backgroundColor: COLORS.secondary,
     textColor: COLORS.primary,
   },
@@ -25,7 +26,7 @@ const STATUS_CONFIG = {
   },
   completed: {
     label: "COMPLETED",
-    backgroundColor: "#4CAF50",
+    backgroundColor: COLORS.green,
     textColor: COLORS.neutral,
   },
   cancelled: {
@@ -49,7 +50,7 @@ const STATUS_CONFIG = {
  *  - dateRange    {string}              Pre-formatted: "Oct 12 — Oct 15"
  *  - amount       {number|string}       e.g. 1240 or "1,240"
  *  - currency     {string}              e.g. "$" or "₱"  (default "₱")
- *  - status       {"active"|"pending"|"completed"|"cancelled"}
+ *  - status       {"confirmed"|"pending"|"completed"|"cancelled"}
  *  - onPress      {function}            Navigate to booking detail
  *  - style        {object}              Extra styles on the wrapper
  */
@@ -60,11 +61,11 @@ const BookingCard = ({
   dateRange,
   amount,
   currency = "₱",
-  status = "active",
+  status = "confirmed",
   onPress,
   style,
 }) => {
-  const cfg = STATUS_CONFIG[status] ?? STATUS_CONFIG.active;
+  const cfg = STATUS_CONFIG[status] ?? STATUS_CONFIG.confirmed;
   const isCancelled = status === "cancelled";
 
   const formattedAmount =
