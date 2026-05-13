@@ -74,7 +74,9 @@ const useRoomStore = create((set, get) => ({
       checkOut,
       nights,
       total: room.price_per_night * nights,
-      image: room.image,
+      image:
+        room.image ||
+        (room.image_urls?.[0] ? { uri: room.image_urls[0] } : null),
     };
 
     set((state) => ({

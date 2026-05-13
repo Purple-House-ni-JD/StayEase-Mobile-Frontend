@@ -7,17 +7,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-
-const COLORS = {
-  primary: "#0A1D37",
-  secondary: "#C5A059",
-  neutral: "#FFFFFF",
-  inputBorder: "#E0DDD8",
-  textMuted: "#9A9690",
-  textBody: "#3A3530",
-  deleteBg: "#F5F3EF",
-  deleteIcon: "#9A9690",
-};
+import { COLORS } from "../constants/colors";
 
 /**
  * Safely coerce a value to a Date object.
@@ -160,7 +150,7 @@ const styles = StyleSheet.create({
     minHeight: 120,
   },
   thumbnailPlaceholder: {
-    backgroundColor: "#2B4A6F",
+    backgroundColor: COLORS.backgroundSoft,
   },
 
   // Info block

@@ -22,6 +22,9 @@ const COLORS = {
  *  - roomType    {string}   Room / suite label
  *  - checkIn     {string}   Check-in date string, e.g. "Oct 24, 2023"
  *  - checkOut    {string}   Check-out date string, e.g. "Oct 28, 2023"
+ *  - checkInTime {string}   Check-in time, e.g. "2:00 PM"
+ *  - checkOutTime {string}  Check-out time, e.g. "11:00 AM"
+ *  - estimatedArrival {string} Estimated arrival time, e.g. "3:00 PM"
  *  - style       {object}   Extra styles for the outer wrapper
  */
 const BookingTicketCard = ({
@@ -30,6 +33,9 @@ const BookingTicketCard = ({
   roomType,
   checkIn,
   checkOut,
+  checkInTime,
+  checkOutTime,
+  estimatedArrival,
   style,
 }) => {
   return (
@@ -48,8 +54,6 @@ const BookingTicketCard = ({
 
       {/* ── Detail Grid ── */}
       <View style={styles.grid}>
-        {/* <DetailCell label="GUEST NAME" value={guestName} />
-        <DetailCell label="ROOM TYPE" value={roomType} align="right" /> */}
         <DetailCell label="CHECK-IN" value={checkIn} style={styles.cellTop} />
         <DetailCell
           label="CHECK-OUT"
@@ -57,6 +61,23 @@ const BookingTicketCard = ({
           align="right"
           style={styles.cellTop}
         />
+        {checkInTime && (
+          <DetailCell label="CHECK-IN TIME" value={checkInTime} />
+        )}
+        {checkOutTime && (
+          <DetailCell
+            label="CHECK-OUT TIME"
+            value={checkOutTime}
+            align="right"
+          />
+        )}
+        {estimatedArrival && (
+          <DetailCell
+            label="EST. ARRIVAL"
+            value={estimatedArrival}
+            style={styles.cellBottom}
+          />
+        )}
       </View>
     </View>
   );
@@ -210,6 +231,9 @@ const styles = StyleSheet.create({
   },
   cellTop: {
     marginTop: 14,
+  },
+  cellBottom: {
+    marginBottom: 14,
   },
 });
 

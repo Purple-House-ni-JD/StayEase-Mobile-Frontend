@@ -54,6 +54,7 @@ const CalendarPicker = ({
   initialCheckOut = null,
   onRangeChange,
   style,
+  disabledDates = [],
 }) => {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -98,6 +99,9 @@ const CalendarPicker = ({
   const handleDayPress = (date) => {
     if (!date || date < today) return;
 
+    const state = getDayState(date);
+    if (state === "disabled") return;
+
     if (selectingIn) {
       setCheckIn(date);
       setCheckOut(null);
@@ -120,6 +124,7 @@ const CalendarPicker = ({
   const getDayState = (date) => {
     if (!date) return "empty";
     if (date < today) return "past";
+    if (disabledDates.some((d) => isSameDay(d, date))) return "disabled";
     if (isSameDay(date, checkIn)) return "start";
     if (isSameDay(date, checkOut)) return "end";
     if (isBetween(date, checkIn, checkOut)) return "range";
@@ -167,8 +172,10 @@ const CalendarPicker = ({
               key={idx}
               style={styles.cell}
               onPress={() => handleDayPress(date)}
-              activeOpacity={date && state !== "past" ? 0.75 : 1}
-              disabled={!date || state === "past"}
+              activeOpacity={
+                date && state !== "past" && state !== "disabled" ? 0.75 : 1
+              }
+              disabled={!date || state === "past" || state === "disabled"}
             >
               {/* Range highlight background */}
               {state === "range" && <View style={styles.rangeBg} />}
@@ -191,6 +198,7 @@ const CalendarPicker = ({
                   style={[
                     styles.dayText,
                     state === "past" && styles.dayTextPast,
+                    state === "disabled" && styles.dayTextDisabled,
                     state === "range" && styles.dayTextRange,
                     (state === "start" || state === "end") &&
                       styles.dayTextSelected,
@@ -317,6 +325,9 @@ const styles = StyleSheet.create({
     color: COLORS.textBody,
   },
   dayTextPast: {
+    color: COLORS.inputBorder,
+  },
+  dayTextDisabled: {
     color: COLORS.inputBorder,
   },
   dayTextRange: {

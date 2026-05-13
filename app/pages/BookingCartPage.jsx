@@ -17,17 +17,16 @@ const COLORS = {
   secondary: "#C5A059",
   neutral: "#FFFFFF",
   background: "#F5F3EF",
+  backgroundWarm: "#EFECE6",
   textMuted: "#9A9690",
   textBody: "#3A3530",
+  divider: "#E0DDD8",
+  accent: "#C5A059",
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const SERVICE_FEE_RATE = 0.1;
 
-/**
- * Safely coerce any date-like value to a Date object.
- * Handles: Date instances, ISO strings, timestamps.
- */
 const toDate = (value) => {
   if (!value) return null;
   if (value instanceof Date) return isNaN(value.getTime()) ? null : value;
@@ -51,13 +50,31 @@ const calcSubtotal = (items) =>
   }, 0);
 
 // ─── Empty State ──────────────────────────────────────────────────────────────
-const EmptyCart = () => (
+const EmptyItinerary = () => (
   <View style={styles.emptyContainer}>
-    <Text style={styles.emptyIcon}>🛏</Text>
-    <Text style={styles.emptyTitle}>Your Cart is empty</Text>
+    {/* Decorative key icon in a circle */}
+    <View style={styles.emptyIconWrap}>
+      <Text style={styles.emptyIcon}>🗝</Text>
+    </View>
+    <Text style={styles.emptyTitle}>No Reservations Yet</Text>
     <Text style={styles.emptySubtitle}>
-      Browse our rooms and add your perfect stay.
+      Discover our curated rooms and{"\n"}build your perfect stay.
     </Text>
+    {/* Decorative dashes */}
+    <View style={styles.emptyDashes}>
+      <View style={[styles.dash, styles.dashShort]} />
+      <View style={[styles.dash, styles.dashLong]} />
+      <View style={[styles.dash, styles.dashShort]} />
+    </View>
+  </View>
+);
+
+// ─── Section Label ────────────────────────────────────────────────────────────
+const SectionLabel = ({ children }) => (
+  <View style={styles.sectionLabelRow}>
+    <View style={styles.sectionLabelLine} />
+    <Text style={styles.sectionLabelText}>{children}</Text>
+    <View style={styles.sectionLabelLine} />
   </View>
 );
 
@@ -72,19 +89,19 @@ const BookingCartPage = () => {
 
   // Entry animation
   const contentFade = useRef(new Animated.Value(0)).current;
-  const contentSlide = useRef(new Animated.Value(20)).current;
+  const contentSlide = useRef(new Animated.Value(24)).current;
 
   useRef(
     (() => {
       Animated.parallel([
         Animated.timing(contentFade, {
           toValue: 1,
-          duration: 450,
+          duration: 500,
           useNativeDriver: true,
         }),
         Animated.timing(contentSlide, {
           toValue: 0,
-          duration: 450,
+          duration: 500,
           useNativeDriver: true,
         }),
       ]).start();
@@ -147,19 +164,27 @@ const BookingCartPage = () => {
           { opacity: contentFade, transform: [{ translateY: contentSlide }] },
         ]}
       >
-        {/* Page heading */}
+        {/* ── Page Heading ── */}
         <View style={styles.heading}>
-          <Text style={styles.headingTitle}>Your Cart</Text>
-          <Text style={styles.headingSubtitle}>
-            Review your luxury selections
+          {/* Eyebrow label */}
+          <Text style={styles.headingEyebrow}>
+            {isEmpty
+              ? "YOUR ITINERARY"
+              : `YOUR ITINERARY · ${cartItems.length} ${cartItems.length === 1 ? "ROOM" : "ROOMS"}`}
           </Text>
+          <Text style={styles.headingTitle}>
+            {isEmpty ? "Nothing Reserved" : "Pending Reservations"}
+          </Text>
+          {/* Gold accent bar */}
+          <View style={styles.headingAccentBar} />
         </View>
 
         {isEmpty ? (
-          <EmptyCart />
+          <EmptyItinerary />
         ) : (
           <>
-            {/* ── Cart Items ── */}
+            {/* ── Rooms ── */}
+            <SectionLabel>SELECTED ROOMS</SectionLabel>
             <View style={styles.itemsList}>
               {cartItems.map((item) => (
                 <CartItem key={item.id} item={item} onRemove={handleRemove} />
@@ -173,32 +198,57 @@ const BookingCartPage = () => {
               style={styles.promoSection}
             />
 
-            {/* ── Order summary ── */}
+            {/* ── Reservation Summary ── */}
+            <SectionLabel>RESERVATION SUMMARY</SectionLabel>
             <View style={styles.summaryCard}>
-              <SummaryRow label="Subtotal" value={`₱${subtotal.toFixed(2)}`} />
+              {/* Receipt-style rows */}
+              <SummaryRow
+                label="Room subtotal"
+                value={`₱${subtotal.toFixed(2)}`}
+              />
               <SummaryRow
                 label="Service fee (10%)"
                 value={`₱${serviceFee.toFixed(2)}`}
+                muted
               />
               {discount > 0 && (
                 <SummaryRow
-                  label={`Promo (${appliedCode})`}
-                  value={`-₱${discountAmt.toFixed(2)}`}
+                  label={`Promo · ${appliedCode}`}
+                  value={`−₱${discountAmt.toFixed(2)}`}
                   valueColor={COLORS.secondary}
                 />
               )}
+              {/* Perforated divider */}
+              <View style={styles.perforated}>
+                <View style={styles.perforatedCircleLeft} />
+                <View style={styles.perforatedDashes} />
+                <View style={styles.perforatedCircleRight} />
+              </View>
+              {/* Total line inside card */}
+              <View style={styles.summaryTotalRow}>
+                <Text style={styles.summaryTotalLabel}>TOTAL DUE</Text>
+                <Text style={styles.summaryTotalValue}>
+                  ₱{total.toFixed(2)}
+                </Text>
+              </View>
             </View>
+
+            {/* Subtle note */}
+            <Text style={styles.taxNote}>
+              Inclusive of all applicable taxes and fees
+            </Text>
           </>
         )}
 
         {/* Bottom padding for footer */}
-        <View style={{ height: 220 }} />
+        <View style={{ height: 230 }} />
       </Animated.ScrollView>
 
       {/* ── Summary Footer ── */}
       <View style={styles.footer}>
         <CartSummaryFooter
           total={isEmpty ? 0 : total}
+          label={isEmpty ? "Browse Rooms" : "Confirm Reservation"}
           onPress={handleCheckout}
           disabled={isEmpty}
         />
@@ -213,10 +263,18 @@ const BookingCartPage = () => {
 };
 
 // ─── Summary Row ─────────────────────────────────────────────────────────────
-const SummaryRow = ({ label, value, valueColor }) => (
+const SummaryRow = ({ label, value, valueColor, muted }) => (
   <View style={rowStyles.row}>
-    <Text style={rowStyles.label}>{label}</Text>
-    <Text style={[rowStyles.value, valueColor ? { color: valueColor } : null]}>
+    <Text style={[rowStyles.label, muted && rowStyles.labelMuted]}>
+      {label}
+    </Text>
+    <Text
+      style={[
+        rowStyles.value,
+        muted && rowStyles.valueMuted,
+        valueColor ? { color: valueColor } : null,
+      ]}
+    >
       {value}
     </Text>
   </View>
@@ -227,17 +285,25 @@ const rowStyles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: 6,
+    paddingVertical: 7,
   },
   label: {
     fontFamily: "PlusJakartaSans-Regular",
     fontSize: 14,
     color: COLORS.textBody,
   },
+  labelMuted: {
+    color: COLORS.textMuted,
+    fontSize: 13,
+  },
   value: {
     fontFamily: "PlusJakartaSans-Regular",
     fontSize: 14,
     color: COLORS.textBody,
+  },
+  valueMuted: {
+    color: COLORS.textMuted,
+    fontSize: 13,
   },
 });
 
@@ -252,7 +318,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: 20,
-    paddingTop: 24,
+    paddingTop: 28,
   },
   scrollContentEmpty: {
     flex: 1,
@@ -260,19 +326,48 @@ const styles = StyleSheet.create({
 
   // ── Heading ──
   heading: {
-    marginBottom: 22,
+    marginBottom: 28,
+  },
+  headingEyebrow: {
+    fontFamily: "PlusJakartaSans-Bold",
+    fontSize: 10,
+    letterSpacing: 2.5,
+    color: COLORS.secondary,
+    marginBottom: 6,
   },
   headingTitle: {
     fontFamily: "NotoSerif-Bold",
-    fontSize: 28,
+    fontSize: 30,
     color: COLORS.primary,
     letterSpacing: 0.2,
+    lineHeight: 36,
   },
-  headingSubtitle: {
-    fontFamily: "PlusJakartaSans-Regular",
-    fontSize: 14,
-    color: COLORS.textMuted,
+  headingAccentBar: {
+    marginTop: 12,
+    width: 36,
+    height: 2,
+    backgroundColor: COLORS.secondary,
+    borderRadius: 2,
+  },
+
+  // ── Section label ──
+  sectionLabelRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginBottom: 14,
     marginTop: 4,
+  },
+  sectionLabelLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: COLORS.divider,
+  },
+  sectionLabelText: {
+    fontFamily: "PlusJakartaSans-Bold",
+    fontSize: 9.5,
+    letterSpacing: 2,
+    color: COLORS.textMuted,
   },
 
   // ── Cart items ──
@@ -283,17 +378,82 @@ const styles = StyleSheet.create({
 
   // ── Promo ──
   promoSection: {
-    marginBottom: 22,
+    marginBottom: 28,
   },
 
-  // ── Light summary card ──
+  // ── Summary card — receipt style ──
   summaryCard: {
     backgroundColor: COLORS.neutral,
     borderRadius: 16,
     paddingHorizontal: 18,
-    paddingVertical: 6,
+    paddingTop: 4,
+    paddingBottom: 14,
     borderWidth: 1,
-    borderColor: "#E0DDD8",
+    borderColor: COLORS.divider,
+    marginBottom: 10,
+    overflow: "hidden",
+  },
+  // Perforated tear-off divider
+  perforated: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginVertical: 10,
+    marginHorizontal: -18,
+  },
+  perforatedCircleLeft: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: COLORS.background,
+    borderWidth: 1,
+    borderColor: COLORS.divider,
+    marginLeft: -8,
+  },
+  perforatedCircleRight: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: COLORS.background,
+    borderWidth: 1,
+    borderColor: COLORS.divider,
+    marginRight: -8,
+  },
+  perforatedDashes: {
+    flex: 1,
+    height: 1,
+    borderStyle: "dashed",
+    borderWidth: 1,
+    borderColor: COLORS.divider,
+  },
+  // Total inside the card
+  summaryTotalRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingTop: 2,
+  },
+  summaryTotalLabel: {
+    fontFamily: "PlusJakartaSans-Bold",
+    fontSize: 10,
+    letterSpacing: 2,
+    color: COLORS.textMuted,
+  },
+  summaryTotalValue: {
+    fontFamily: "NotoSerif-Bold",
+    fontSize: 22,
+    color: COLORS.primary,
+    letterSpacing: 0.3,
+  },
+
+  // Tax note
+  taxNote: {
+    fontFamily: "PlusJakartaSans-Regular",
+    fontSize: 11.5,
+    color: COLORS.textMuted,
+    textAlign: "center",
+    marginTop: 4,
+    marginBottom: 8,
+    letterSpacing: 0.2,
   },
 
   // ── Empty state ──
@@ -301,26 +461,51 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    paddingTop: 80,
-    gap: 12,
+    paddingTop: 60,
+    gap: 14,
+  },
+  emptyIconWrap: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    borderWidth: 1.5,
+    borderColor: COLORS.divider,
+    backgroundColor: COLORS.neutral,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 4,
   },
   emptyIcon: {
-    fontSize: 56,
-    opacity: 0.3,
+    fontSize: 30,
   },
   emptyTitle: {
     fontFamily: "NotoSerif-Bold",
-    fontSize: 20,
+    fontSize: 22,
     color: COLORS.primary,
-    opacity: 0.6,
+    letterSpacing: 0.2,
   },
   emptySubtitle: {
     fontFamily: "PlusJakartaSans-Regular",
     fontSize: 14,
     color: COLORS.textMuted,
     textAlign: "center",
-    paddingHorizontal: 32,
+    lineHeight: 21,
+    paddingHorizontal: 24,
   },
+  emptyDashes: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 8,
+    opacity: 0.35,
+  },
+  dash: {
+    height: 1.5,
+    backgroundColor: COLORS.secondary,
+    borderRadius: 1,
+  },
+  dashShort: { width: 16 },
+  dashLong: { width: 32 },
 
   // ── Footer ──
   footer: {

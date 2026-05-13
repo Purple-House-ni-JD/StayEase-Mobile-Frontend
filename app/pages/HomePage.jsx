@@ -40,35 +40,46 @@ const HomePage = () => {
   const setSearchQuery = useRoomStore((state) => state.setSearchQuery);
 
   const headerFade = useRef(new Animated.Value(0)).current;
+  const greetingSlide = useRef(new Animated.Value(30)).current;
   const contentFade = useRef(new Animated.Value(0)).current;
-  const contentSlide = useRef(new Animated.Value(24)).current;
+  const contentSlide = useRef(new Animated.Value(20)).current;
+  const accentScale = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     Animated.sequence([
       Animated.timing(headerFade, {
         toValue: 1,
-        duration: 450,
+        duration: 400,
         useNativeDriver: true,
       }),
       Animated.parallel([
         Animated.timing(contentFade, {
           toValue: 1,
-          duration: 500,
+          duration: 550,
           useNativeDriver: true,
         }),
         Animated.timing(contentSlide, {
           toValue: 0,
+          duration: 550,
+          useNativeDriver: true,
+        }),
+        Animated.timing(greetingSlide, {
+          toValue: 0,
           duration: 500,
+          useNativeDriver: true,
+        }),
+        Animated.spring(accentScale, {
+          toValue: 1,
+          tension: 60,
+          friction: 8,
           useNativeDriver: true,
         }),
       ]),
     ]).start();
-  }, [headerFade, contentFade, contentSlide]);
+  }, [headerFade, contentFade, contentSlide, greetingSlide, accentScale]);
 
   useEffect(() => {
-    hydrateRooms().catch(() => {
-      // Non-blocking for now; API errors are surfaced in empty states.
-    });
+    hydrateRooms().catch(() => {});
   }, [hydrateRooms]);
 
   const roomCategories = useMemo(() => {
@@ -112,33 +123,43 @@ const HomePage = () => {
           transform: [{ translateY: contentSlide }],
         }}
       >
-        <View style={styles.greetingSection}>
-          <Text style={styles.greetingText}>
-            Good Day, {user?.first_name || "Guest"}
-          </Text>
+        {/* ── Greeting Block ── */}
+        <Animated.View
+          style={[
+            styles.greetingSection,
+            { transform: [{ translateY: greetingSlide }] },
+          ]}
+        >
+          <View style={styles.greetingRow}>
+            <View style={styles.greetingTextBlock}>
+              <Text style={styles.greetingEyebrow}>WELCOME BACK</Text>
+              <Text style={styles.greetingName}>
+                {user?.first_name || "Guest"}
+              </Text>
+            </View>
+            {/* Gold accent line */}
+            <Animated.View
+              style={[
+                styles.greetingAccent,
+                { transform: [{ scaleX: accentScale }] },
+              ]}
+            />
+          </View>
           <Text style={styles.greetingSubtext}>
             Find your perfect stay today.
           </Text>
+        </Animated.View>
+
+        {/* ── Search ── */}
+        <View style={styles.searchWrapper}>
+          <SearchBar
+            initialValue={searchQuery}
+            onSubmit={setSearchQuery}
+            placeholder="Search rooms or categories…"
+          />
         </View>
-    
-        <SearchBar
-          initialValue={searchQuery}
-          onSubmit={setSearchQuery}
-          placeholder="Search rooms..."
-        />
 
-        {/* <View style={styles.filterRow}>
-          <TouchableOpacity style={styles.filterChipActive} activeOpacity={0.8}>
-            <Text style={styles.filterChipIcon}>📅</Text>
-            <Text style={styles.filterChipTextActive}>Oct 12 - 15</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.filterChip} activeOpacity={0.8}>
-            <Text style={styles.filterChipIcon}>👤</Text>
-            <Text style={styles.filterChipText}>2 Guests</Text>
-          </TouchableOpacity>
-        </View> */}
-
+        {/* ── Category Tabs ── */}
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -155,30 +176,39 @@ const HomePage = () => {
           ))}
         </ScrollView>
 
+        {/* ── Featured ── */}
         {featuredProperty ? (
-          <FeaturedCard
-            item={featuredProperty}
-            onPress={() => {
-              const firstRoom = rooms[0];
-              if (firstRoom) {
-                router.push(`/rooms/${firstRoom.id}`);
-              }
-            }}
-          />
+          <View style={styles.featuredWrapper}>
+            <View style={styles.featuredLabelRow}>
+              <View style={styles.featuredLabelLine} />
+              <Text style={styles.featuredLabel}>FEATURED PROPERTY</Text>
+              <View style={styles.featuredLabelLine} />
+            </View>
+            <FeaturedCard
+              item={featuredProperty}
+              onPress={() => {
+                const firstRoom = rooms[0];
+                if (firstRoom) router.push(`/rooms/${firstRoom.id}`);
+              }}
+            />
+          </View>
         ) : null}
 
+        {/* ── Section Header ── */}
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Available Rooms</Text>
-          {/* <TouchableOpacity activeOpacity={0.7}>
-            <Text style={styles.sectionViewAll}>View all</Text>
-          </TouchableOpacity> */}
+          <View style={styles.sectionTitleGroup}>
+            <View style={styles.sectionTitleDot} />
+            <Text style={styles.sectionTitle}>Available Rooms</Text>
+          </View>
+          <Text style={styles.roomCount}>{filteredRooms.length} rooms</Text>
         </View>
       </Animated.View>
     ),
-    // Only re-render the header when these values actually change — not on keystrokes.
     [
       contentFade,
       contentSlide,
+      greetingSlide,
+      accentScale,
       user,
       searchQuery,
       setSearchQuery,
@@ -188,6 +218,7 @@ const HomePage = () => {
       featuredProperty,
       rooms,
       router,
+      filteredRooms.length,
     ],
   );
 
@@ -217,7 +248,13 @@ const HomePage = () => {
         keyboardShouldPersistTaps="handled"
         ListEmptyComponent={
           !isRoomsLoading ? (
-            <Text style={styles.emptyText}>No rooms found.</Text>
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyIcon}>🔍</Text>
+              <Text style={styles.emptyText}>No rooms found.</Text>
+              <Text style={styles.emptySubtext}>
+                Try adjusting your search or filters.
+              </Text>
+            </View>
           ) : null
         }
       />
@@ -238,105 +275,159 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: 20,
-    paddingTop: 24,
+    paddingTop: 20,
     paddingBottom: 100,
   },
   listHeader: {
-    paddingBottom: 16,
+    paddingBottom: 8,
   },
   listFooter: {
-    height: 120,
+    height: 100,
   },
+
+  // ── Greeting ──────────────────────────────────
   greetingSection: {
-    marginBottom: 18,
+    marginBottom: 22,
   },
-  greetingText: {
+  greetingRow: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    justifyContent: "space-between",
+    marginBottom: 6,
+  },
+  greetingTextBlock: {
+    flex: 1,
+  },
+  greetingEyebrow: {
+    fontFamily: FONTS.label,
+    fontSize: 9.5,
+    color: COLORS.secondary,
+    letterSpacing: 2.5,
+    marginBottom: 3,
+  },
+  greetingName: {
     fontFamily: FONTS.headline,
-    fontSize: 24,
+    fontSize: 28,
     color: COLORS.primary,
-    letterSpacing: 0.2,
+    letterSpacing: 0.1,
+    lineHeight: 33,
+  },
+  greetingAccent: {
+    width: 42,
+    height: 3,
+    backgroundColor: COLORS.secondary,
+    borderRadius: 2,
+    marginBottom: 6,
+    transformOrigin: "right",
   },
   greetingSubtext: {
-    fontFamily: FONTS.body,
-    fontSize: 14,
+    fontFamily: FONTS.bodyLight,
+    fontSize: 13.5,
     color: COLORS.textMuted,
-    marginTop: 4,
+    letterSpacing: 0.1,
   },
-  filterRow: {
-    flexDirection: "row",
-    gap: 10,
-    marginBottom: 20,
+
+  // ── Search ──────────────────────────────────
+  searchWrapper: {
+    marginBottom: 18,
   },
-  filterChipActive: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    backgroundColor: COLORS.primary,
-    borderRadius: 50,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-  },
-  filterChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    backgroundColor: COLORS.neutral,
-    borderRadius: 50,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderWidth: 1,
-    borderColor: COLORS.inputBorder,
-  },
-  filterChipIcon: {
-    fontSize: 14,
-  },
-  filterChipTextActive: {
-    fontFamily: FONTS.label,
-    fontSize: 13,
-    color: COLORS.neutral,
-  },
-  filterChipText: {
-    fontFamily: FONTS.label,
-    fontSize: 13,
-    color: COLORS.textBody,
-  },
+
+  // ── Tabs ──────────────────────────────────
   tabsScroll: {
     marginHorizontal: -20,
-    marginBottom: 14,
+    marginBottom: 20,
   },
   tabsContent: {
     paddingHorizontal: 20,
-    gap: 16,
+    gap: 10,
     flexDirection: "row",
     alignItems: "center",
   },
+
+  // ── Featured ──────────────────────────────────
+  featuredWrapper: {
+    marginBottom: 6,
+  },
+  featuredLabelRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 12,
+    gap: 10,
+  },
+  featuredLabelLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: COLORS.inputBorder,
+  },
+  featuredLabel: {
+    fontFamily: FONTS.label,
+    fontSize: 9,
+    color: COLORS.textMuted,
+    letterSpacing: 2.2,
+  },
+
+  // ── Section Header ──────────────────────────────────
   sectionHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 14,
-    marginTop: 12,
+    marginBottom: 16,
+    marginTop: 10,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.inputBorder,
+  },
+  sectionTitleGroup: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  sectionTitleDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+    backgroundColor: COLORS.secondary,
   },
   sectionTitle: {
     fontFamily: FONTS.headline,
-    fontSize: 18,
+    fontSize: 17,
     color: COLORS.primary,
+    letterSpacing: 0.1,
   },
-  sectionViewAll: {
+  roomCount: {
     fontFamily: FONTS.label,
-    fontSize: 11.5,
-    color: COLORS.secondary,
-    letterSpacing: 1,
+    fontSize: 10,
+    color: COLORS.textMuted,
+    letterSpacing: 1.2,
   },
+
+  // ── Grid ──────────────────────────────────
   roomGrid: {
     flexDirection: "row",
     justifyContent: "space-between",
     gap: 12,
-    marginBottom: 16,
+    marginBottom: 12,
+  },
+
+  // ── Empty State ──────────────────────────────────
+  emptyState: {
+    alignItems: "center",
+    paddingTop: 40,
+    paddingBottom: 20,
+  },
+  emptyIcon: {
+    fontSize: 32,
+    marginBottom: 12,
   },
   emptyText: {
-    marginTop: 12,
-    fontFamily: FONTS.body,
+    fontFamily: FONTS.headlineReg,
+    fontSize: 16,
+    color: COLORS.primary,
+    marginBottom: 6,
+  },
+  emptySubtext: {
+    fontFamily: FONTS.bodyLight,
+    fontSize: 13,
     color: COLORS.textMuted,
     textAlign: "center",
   },

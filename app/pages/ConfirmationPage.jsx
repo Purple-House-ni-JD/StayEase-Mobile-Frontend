@@ -36,6 +36,15 @@ const formatDate = (dateString) => {
   });
 };
 
+const formatTime = (timeString) => {
+  if (!timeString) return null;
+  const [hours, minutes] = timeString.split(":");
+  const hour = parseInt(hours, 10);
+  const ampm = hour >= 12 ? "PM" : "AM";
+  const displayHour = hour % 12 || 12;
+  return `${displayHour}:${minutes} ${ampm}`;
+};
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 const ConfirmationPage = () => {
   const router = useRouter();
@@ -152,6 +161,9 @@ const ConfirmationPage = () => {
           roomType={bookingData.room?.name || bookingData.room_type || "Room"}
           checkIn={formatDate(bookingData.check_in)}
           checkOut={formatDate(bookingData.check_out)}
+          checkInTime={formatTime(bookingData.checkin_time)}
+          checkOutTime={formatTime(bookingData.checkout_time)}
+          estimatedArrival={formatTime(bookingData.estimated_arrival_time)}
           style={styles.ticket}
         />
 

@@ -7,6 +7,7 @@ export const createBooking = async ({
   check_out,
   guest_count,
   payment_method,
+  estimated_arrival_time,
   guest_details = null,
 }) => {
   const payload = {
@@ -16,6 +17,10 @@ export const createBooking = async ({
     guest_count,
     payment_method,
   };
+
+  if (estimated_arrival_time) {
+    payload.estimated_arrival_time = estimated_arrival_time;
+  }
 
   if (guest_details) {
     payload.guest_details = guest_details;
@@ -31,16 +36,26 @@ export const createGuestBooking = async ({
   check_out,
   guest_count,
   payment_method,
+  estimated_arrival_time,
   guest_details,
 }) => {
-  const response = await guestApiClient.post("/bookings/guest/create/", {
+  const payload = {
     room_ids,
     check_in,
     check_out,
     guest_count,
     payment_method,
     guest_details,
-  });
+  };
+
+  if (estimated_arrival_time) {
+    payload.estimated_arrival_time = estimated_arrival_time;
+  }
+
+  const response = await guestApiClient.post(
+    "/bookings/guest/create/",
+    payload,
+  );
   return response.data;
 };
 
